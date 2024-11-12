@@ -16,7 +16,7 @@ export default function TitleBar() {
         variant="ghost"
         size="icon"
         onClick={handleMinimize}
-        className="rounded-none h-10 w-10 text-muted-foreground hover:text-foreground"
+        className="h-[1.5rem] w-8 text-muted-foreground hover:text-foreground hover:bg-zinc-700 rounded-md"
         aria-label="Minimize"
       >
         <Minus className="h-4 w-4" />
@@ -25,7 +25,7 @@ export default function TitleBar() {
         variant="ghost"
         size="icon"
         onClick={handleMaximize}
-        className="rounded-none h-10 w-10 text-muted-foreground hover:text-foreground"
+        className="h-[1.5rem] w-8 text-muted-foreground hover:text-foreground hover:bg-zinc-700 rounded-md"
         aria-label="Maximize"
       >
         <Maximize className="h-4 w-4" />
@@ -34,7 +34,7 @@ export default function TitleBar() {
         variant="ghost"
         size="icon"
         onClick={handleClose}
-        className="rounded-none h-10 w-10 hover:bg-accent text-muted-foreground hover:text-destructive"
+        className="h-[1.5rem] w-8 hover:bg-accent text-muted-foreground hover:text-destructive hover:bg-zinc-700 rounded-md mr-1"
         aria-label="Close"
       >
         <X className="h-4 w-4" />
