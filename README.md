@@ -56,14 +56,6 @@ To set up the development environment:
 
 This will launch the application in development mode, allowing you to make changes and see them reflected in real-time.
 
-## Technologies Used
-
-- [Tauri](https://tauri.app/): For building the native application
-- [React](https://reactjs.org/): For the user interface
-- [shadcn/ui](https://ui.shadcn.com/): For consistent and customizable UI components
-- [ReactMarkdown](https://github.com/remarkjs/react-markdown): For rendering Markdown content
-- [react-syntax-highlighter](https://github.com/react-syntax-highlighter/react-syntax-highlighter): For code syntax highlighting
-
 ---
 
 For any questions or support, please open an issue on the GitHub repository.
