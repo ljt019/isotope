@@ -4,7 +4,7 @@ Isotope is an elegant, native application that provides a sleek interface for in
 
 ## Features
 
-- **Intuitive Interface**: Clean and professional design for effortless interaction with the Llama model.
+- **Intuitive Interface**: Clean design for effortless interaction with the Llama model.
 - **Real-time Response Generation**: Watch as the AI generates responses token by token.
 - **Syntax Highlighting**: Beautifully formatted code snippets in the AI's responses.
 - **Keyboard Shortcuts**: Quickly send prompts using Ctrl+Enter.
