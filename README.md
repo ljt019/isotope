@@ -2,8 +2,6 @@
 
 Isotope is an elegant, native application that provides a sleek interface for interacting with the Llama language model. It offers a user-friendly environment for generating AI-powered responses, making it an ideal tool for developers, writers, and AI enthusiasts.
 
-![Isotope Screenshot](https://placeholder.com/isotope-screenshot.png)
-
 ## Features
 
 - **Intuitive Interface**: Clean and professional design for effortless interaction with the Llama model.
