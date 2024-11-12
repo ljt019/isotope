@@ -31,11 +31,18 @@ async fn chat(app_handle: tauri::AppHandle, message: String) -> Result<(), Strin
     Ok(())
 }
 
+use window_shadows::set_shadow;
+
 fn main() {
     dotenv::dotenv().ok();
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![chat])
+        .setup(|app| {
+            let window = app.get_window("main").unwrap();
+            set_shadow(window, true).unwrap();
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
