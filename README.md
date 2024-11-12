@@ -49,6 +49,7 @@ To install Isotope, follow these steps:
 To set up the development environment:
 
 1. Follow the installation steps above.
+
 2. Instead of building, run the development server:
    ```
    npm run tauri dev
