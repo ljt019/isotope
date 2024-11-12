@@ -1,182 +1,71 @@
-# Tauri React Template
+# Isotope
 
-A robust and feature-rich template for building desktop applications with Tauri, React, Vite, TypeScript, Tailwind CSS, React Query, and ShadCN.
+Isotope is an elegant, native application that provides a sleek interface for interacting with the Llama language model. It offers a user-friendly environment for generating AI-powered responses, making it an ideal tool for developers, writers, and AI enthusiasts.
 
-[![Tauri](https://img.shields.io/badge/tauri-%2324C8DB.svg?style=for-the-badge&logo=tauri&logoColor=%23FFFFFF)](https://tauri.app/)
-[![Vite](https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)](https://reactjs.org/)
-[![React Query](https://img.shields.io/badge/-React%20Query-FF4154?style=for-the-badge&logo=react%20query&logoColor=white)](https://tanstack.com/query/latest/)
-[![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![ShadCN](https://img.shields.io/badge/shadcn-black?style=for-the-badge&logo=shadcnui&logoColor=white)](https://ui.shadcn.com/)
-
-## Table of Contents
-
-- [Features](#features)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Available Scripts](#available-scripts)
-- [Project Structure](#project-structure)
-- [Customization](#customization)
+![Isotope Screenshot](https://placeholder.com/isotope-screenshot.png)
 
 ## Features
 
-- Tauri Integration: Build secure and lightweight desktop applications.
-- React 18: Modern and efficient UI library.
-- Vite: Fast and optimized development build tool.
-- TypeScript: Strongly typed JavaScript for better developer experience.
-- Tailwind CSS: Utility-first CSS framework for rapid UI development.
-- React Query: Data fetching and state management.
-- ShadCN UI: Accessible and customizable UI components.
-- Routing: Client-side routing with React Router DOM.
-- Icons: Rich icon library with Radix UI and Lucide React.
-- State Management: Simple and scalable state management with React hooks.
-- Build Scripts: Streamlined scripts for development and production builds.
-
-## Prerequisites
-
-Before you begin, ensure you have met the following requirements:
-
-- Node.js: Install Node.js (v16 or higher).
-- Rust: Install Rust (required for Tauri).
-- Tauri CLI: Install Tauri CLI globally:
-  ```bash
-  npm install -g @tauri-apps/cli
-  ```
+- **Intuitive Interface**: Clean and professional design for effortless interaction with the Llama model.
+- **Real-time Response Generation**: Watch as the AI generates responses token by token.
+- **Syntax Highlighting**: Beautifully formatted code snippets in the AI's responses.
+- **Keyboard Shortcuts**: Quickly send prompts using Ctrl+Enter.
+- **Cross-platform**: Built with Tauri, ensuring compatibility across multiple operating systems.
+- **Dark Mode Support**: Seamlessly switch between light and dark themes.
 
 ## Installation
 
-1. Clone the Repository
+To install Isotope, follow these steps:
 
-   ```bash
-   git clone https://github.com/your-username/tauri_template.git
-   cd tauri_template
+1. Clone the repository:
+
+   ```
+   git clone https://github.com/yourusername/isotope.git
+   cd isotope
    ```
 
-2. Install Dependencies
+2. Install dependencies:
 
-   ```bash
+   ```
    npm install
    ```
 
-3. Initialize Tauri
+3. Build the application:
 
-   If this is not already set up, initialize Tauri in your project:
-
-   ```bash
-   tauri init
+   ```
+   npm run tauri build
    ```
 
-## Available Scripts
+4. The built application will be available in the `src-tauri/target/release` folder.
 
-In the project directory, you can run:
+## Usage
 
-- `npm run dev`: Runs the application in development mode using Vite.
-- `npm run build`: Compiles the TypeScript code and builds the application for production.
-- `npm run preview`: Locally preview the production build.
-- `npm run tauri`: Runs Tauri commands. You can pass additional arguments as needed.
-- `npm run tauri:dev`: Runs the application in development mode with Tauri.
-- `npm run tauri:build`: Builds the application for production with Tauri.
+1. Launch the Isotope application.
+2. Enter your prompt in the text area at the bottom of the interface.
+3. Click the "Generate Response" button or press Ctrl+Enter to send your prompt.
+4. Watch as the AI generates its response in real-time in the main content area.
+5. Scroll through the response and enjoy the formatted text and code snippets.
 
-## Project Structure
+## Development
 
-```
-tauri_template/
-├── src/
-│   ├── components/
-│   │   └── ui/
-│   │       └── Button.tsx
-│   ├── screens/
-│   │   └── Index.tsx
-│   ├── App.tsx
-│   ├── main.tsx
-│   └── index.css
-├── tauri/
-│   └── ... (Tauri configuration and source files)
-├── package.json
-├── tsconfig.json
-├── vite.config.ts
-├── tailwind.config.js
-├── postcss.config.js
-└── README.md
-```
+To set up the development environment:
 
-## Customization
-
-### Adding New Routes
-
-1. Create a New Screen
-
-   ```tsx
-   // src/screens/About.tsx
-   import React from "react";
-
-   export function About() {
-     return <div className="p-4">About Page</div>;
-   }
+1. Follow the installation steps above.
+2. Instead of building, run the development server:
+   ```
+   npm run tauri dev
    ```
 
-2. Update Routing
+This will launch the application in development mode, allowing you to make changes and see them reflected in real-time.
 
-   ```tsx
-   // src/App.tsx
-   import { HashRouter as Router, Routes, Route } from "react-router-dom";
-   import { Index } from "./screens/index";
-   import { About } from "./screens/About";
+## Technologies Used
 
-   function App() {
-     return (
-       <Router>
-         <Routes>
-           <Route path="/" element={<Index />} />
-           <Route path="/about" element={<About />} />
-         </Routes>
-       </Router>
-     );
-   }
+- [Tauri](https://tauri.app/): For building the native application
+- [React](https://reactjs.org/): For the user interface
+- [shadcn/ui](https://ui.shadcn.com/): For consistent and customizable UI components
+- [ReactMarkdown](https://github.com/remarkjs/react-markdown): For rendering Markdown content
+- [react-syntax-highlighter](https://github.com/react-syntax-highlighter/react-syntax-highlighter): For code syntax highlighting
 
-   export default App;
-   ```
+---
 
-### Styling with Tailwind CSS
-
-Customize the Tailwind configuration in `tailwind.config.js` to extend themes, add plugins, or modify existing styles.
-
-```javascript
-// tailwind.config.js
-module.exports = {
-  content: ["./src/**/*.{js,ts,jsx,tsx}"],
-  theme: {
-    extend: {
-      // Customizations here
-    },
-  },
-  plugins: [
-    require("tailwindcss-animate"),
-    // Add other plugins here
-  ],
-};
-```
-
-### Using React Query
-
-Set up a QueryClient and provide it to your application.
-
-```tsx
-// src/main.tsx
-import React from "react";
-import ReactDOM from "react-dom/client";
-import App from "./App";
-import "../index.css";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-const queryClient = new QueryClient();
-
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
-  </React.StrictMode>
-);
-```
+For any questions or support, please open an issue on the GitHub repository.
