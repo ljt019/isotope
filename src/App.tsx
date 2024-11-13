@@ -3,7 +3,10 @@ import {
   Routes as RoutePrimitive,
   Route,
 } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
 import TitleBar from "@/components/titlebar";
+
 import { Index } from "./screens/index";
 
 type Route = {
@@ -41,10 +44,14 @@ function Layout({ children }: { children: JSX.Element }) {
   );
 }
 
+const queryClient = new QueryClient();
+
 function App() {
   return (
     <Router>
-      <Routes routes={routes} />
+      <QueryClientProvider client={queryClient}>
+        <Routes routes={routes} />
+      </QueryClientProvider>
     </Router>
   );
 }

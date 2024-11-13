@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api/tauri";
-import { listen } from "@tauri-apps/api/event";
 import { useState, useEffect, useRef } from "react";
 import { Send, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,15 @@ import { Separator } from "@/components/ui/separator";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { useGetModelOptions } from "@/hooks/use_get_model_options";
+import { useGetSelectedModel } from "@/hooks/use_get_selected_model";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { listen } from "@tauri-apps/api/event";
 
 export function Index() {
   const [prompt, setPrompt] = useState("");
@@ -18,11 +26,30 @@ export function Index() {
   const responseRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (responseRef.current) {
+      responseRef.current.scrollTop = responseRef.current.scrollHeight;
+    }
+  }, [response]);
+
+  useEffect(() => {
     const unlistenToken = listen("chat-token", (event) => {
       setResponse((prev) => prev + event.payload);
     });
 
-    const unlistenEnd = listen("chat-end", () => {
+    type ChatEndPayload = {
+      text: string;
+      tokens: number;
+      time: number;
+      model: string;
+    };
+
+    const unlistenEnd = listen<ChatEndPayload>("chat-end", (event) => {
+      console.log("Chat completed:", {
+        text: event.payload.text,
+        tokens: event.payload.tokens,
+        time: event.payload.time,
+        model: event.payload.model,
+      });
       setIsGenerating(false);
     });
 
@@ -37,18 +64,6 @@ export function Index() {
       unlistenError.then((f) => f());
     };
   }, []);
-
-  useEffect(() => {
-    if (!isGenerating && response) {
-      console.log("Raw model response:", response);
-    }
-  }, [isGenerating, response]);
-
-  useEffect(() => {
-    if (responseRef.current) {
-      responseRef.current.scrollTop = responseRef.current.scrollHeight;
-    }
-  }, [response]);
 
   const startChat = async () => {
     if (isGenerating || !prompt.trim()) return;
@@ -81,12 +96,12 @@ export function Index() {
                 alt="ollama"
                 className="h-8 w-8 mr-2 [filter:brightness(0)_invert(1)]"
               />
-              <div>Llama-3.2-1B-Instruct</div>
+              <div>
+                <SelectedModelTitle />
+              </div>
             </div>
           </CardTitle>
-          <Button variant="ghost" size="icon">
-            <ChevronDown className="h-4 w-4" />
-          </Button>
+          <SelectModel />
         </CardHeader>
         <Separator />
         <CardContent className="flex-grow overflow-hidden p-6">
@@ -152,3 +167,65 @@ export function Index() {
     </div>
   );
 }
+
+function SelectedModelTitle() {
+  const { data: selected_model, isLoading, isError } = useGetSelectedModel();
+
+  if (isLoading) return <div>Loading...</div>;
+
+  if (isError) return <div>Error getting model options</div>;
+
+  if (!selected_model) return null;
+
+  return <div>{selected_model}</div>;
+}
+
+function SelectModel() {
+  const { data: modelOptions, isLoading, isError } = useGetModelOptions();
+  const { data: selectedModel, refetch: refetchSelectedModel } =
+    useGetSelectedModel();
+
+  async function setOption(modelName: string) {
+    try {
+      await invoke("set_model", { modelName: modelName });
+      await refetchSelectedModel();
+    } catch (error) {
+      console.error("Error setting model:", error);
+    }
+  }
+
+  if (isLoading)
+    return <div className="text-sm text-muted-foreground">Loading...</div>;
+
+  if (isError)
+    return (
+      <div className="text-sm text-destructive">
+        Error getting model options
+      </div>
+    );
+
+  if (!modelOptions) return null;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <ChevronDown className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        {modelOptions.map((model) => (
+          <DropdownMenuItem
+            key={model}
+            onSelect={() => setOption(model)}
+            className={selectedModel === model ? "bg-accent" : ""}
+          >
+            {model}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+export default Index;

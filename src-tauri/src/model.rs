@@ -4,7 +4,7 @@ use candle_nn::VarBuilder;
 use candle_transformers::generation::{LogitsProcessor, Sampling};
 use candle_transformers::models::llama::{Cache, Llama, LlamaConfig, LlamaEosToks};
 use hf_hub::{api::sync::ApiBuilder, Repo, RepoType};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::sync::Arc;
 use tauri::Manager;
 use tokenizers::Tokenizer;
@@ -31,19 +31,9 @@ pub struct GenerationParams {
     pub top_p: Option<f64>,
     pub top_k: Option<usize>,
     pub max_tokens: Option<usize>,
-    pub model: Option<String>,
     pub seed: Option<u64>,
     pub repeat_penalty: Option<f32>,
     pub repeat_last_n: Option<usize>,
-}
-
-/// Structure for the generation response
-#[derive(Debug, Serialize)]
-struct GenerationResponse {
-    generated_text: String,
-    tokens_generated: usize,
-    generation_time: f64,
-    model: String,
 }
 
 /// Holds the resources required by the model
@@ -127,6 +117,7 @@ fn format_messages(messages: &[Message]) -> String {
 
 /// The main Model struct encapsulating the Llama model and tokenizer
 pub struct Model {
+    model_id: String,
     resources: Arc<ModelResources>,
     system_prompt: String,
 }
@@ -139,6 +130,7 @@ impl Model {
         println!("Loading model: {}", model_id);
         let resources = ModelResources::load(model_id).await?;
         Ok(Self {
+            model_id: model_id.to_string(),
             resources: Arc::new(resources),
             system_prompt: SYSTEM_PROMPT.to_string(),
         })
@@ -177,7 +169,6 @@ impl Model {
             top_p: Some(0.9),
             top_k: Some(50),
             max_tokens: Some(500),
-            model: None,
             seed: Some(42),
             repeat_penalty: Some(1.1),
             repeat_last_n: Some(128),
@@ -212,7 +203,6 @@ impl Model {
             top_p: Some(0.9),
             top_k: Some(50),
             max_tokens: Some(500),
-            model: None,
             seed: Some(42),
             repeat_penalty: Some(1.1),
             repeat_last_n: Some(128),
@@ -319,8 +309,22 @@ impl Model {
             token_generated, generation_time
         );
 
-        // Optionally, emit a completion event
-        let _ = app_handle.emit_all("chat-end", "Generation complete");
+        // Emit a completion event with json containing the generated text, the number of tokens generated, the generation time, and the model id.
+        let _ = app_handle
+            .emit_all(
+                "chat-end",
+                serde_json::json!({
+                    "text": self
+                        .resources
+                        .tokenizer
+                        .decode(&token_output, true)
+                        .map_err(|e| anyhow::anyhow!("Decoding error: {}", e))?,
+                    "tokens": token_generated,
+                    "time": generation_time,
+                    "model": self.model_id,
+                }),
+            )
+            .map_err(|e| anyhow::anyhow!("Failed to emit completion event: {}", e));
 
         Ok(())
     }
