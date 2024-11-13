@@ -68,7 +68,7 @@ impl ModelResources {
         let config = config.into_config(false);
 
         let device = Device::cuda_if_available(0)?;
-        let dtype = DType::F64;
+        let dtype = DType::F32;
 
         let filename: Vec<std::path::PathBuf>;
 
@@ -252,7 +252,7 @@ impl Model {
             LogitsProcessor::from_sampling(params.seed.unwrap_or(42), sampling);
 
         let device = Device::cuda_if_available(0)?;
-        let dtype = DType::F64;
+        let dtype = DType::F32;
         let mut cache = Cache::new(true, dtype, &self.resources.config, &device)?;
 
         let start_gen = std::time::Instant::now();
@@ -380,7 +380,7 @@ impl Model {
             LogitsProcessor::from_sampling(params.seed.unwrap_or(42), sampling);
 
         let device = Device::cuda_if_available(0)?;
-        let dtype = DType::F64;
+        let dtype = DType::F32;
         let mut cache = Cache::new(true, dtype, &self.resources.config, &device)?;
 
         let start_gen = std::time::Instant::now();
