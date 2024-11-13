@@ -4,6 +4,7 @@ use tauri_plugin_store::StoreBuilder;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, EnumIter)]
 pub enum ModelOptions {
+    V32_3BInstruct,
     V32_1BInstruct,
     SmolLM2_135MInstruct,
     SmolLM2_360MInstruct,
@@ -14,6 +15,7 @@ pub enum ModelOptions {
 impl ModelOptions {
     pub fn get_model_name(&self) -> String {
         match self {
+            ModelOptions::V32_3BInstruct => "meta-llama/Llama-3.2-3B-Instruct".to_string(),
             ModelOptions::V32_1BInstruct => "meta-llama/Llama-3.2-1B-Instruct".to_string(),
             ModelOptions::SmolLM2_135MInstruct => "HuggingFaceTB/SmolLM2-135M-Instruct".to_string(),
             ModelOptions::SmolLM2_360MInstruct => "HuggingFaceTB/SmolLM2-360M-Instruct".to_string(),
@@ -24,6 +26,7 @@ impl ModelOptions {
 
     pub fn from_model_name(name: &str) -> Option<Self> {
         match name {
+            "meta-llama/Llama-3.2-3B-Instruct" => Some(Self::V32_3BInstruct),
             "meta-llama/Llama-3.2-1B-Instruct" => Some(Self::V32_1BInstruct),
             "HuggingFaceTB/SmolLM2-135M-Instruct" => Some(Self::SmolLM2_135MInstruct),
             "HuggingFaceTB/SmolLM2-360M-Instruct" => Some(Self::SmolLM2_360MInstruct),

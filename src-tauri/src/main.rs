@@ -3,6 +3,7 @@
 
 mod model;
 mod model_manager;
+mod utils;
 
 use tauri::async_runtime::spawn;
 use tauri::Manager;

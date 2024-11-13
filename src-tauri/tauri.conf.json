@@ -7,7 +7,7 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "tauri_template",
+    "productName": "isotope_ai",
     "version": "0.1.0"
   },
   "tauri": {
@@ -31,7 +31,7 @@
     },
     "windows": [
       {
-        "title": "tauri_template",
+        "title": "isotope_ai",
         "width": 800,
         "height": 600,
         "decorations": false,
@@ -43,8 +43,8 @@
     },
     "bundle": {
       "active": true,
-      "targets": "all",
-      "identifier": "com.tauri_template.app",
+      "targets": ["nsis"],
+      "identifier": "com.isotopeAi.app",
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",

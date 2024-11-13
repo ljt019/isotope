@@ -1,3 +1,4 @@
+use crate::utils::hub_load_safetensors;
 use anyhow::{Error, Result};
 use candle_core::{DType, Device, Tensor};
 use candle_nn::VarBuilder;
@@ -66,11 +67,22 @@ impl ModelResources {
         let config: LlamaConfig = serde_json::from_slice(&std::fs::read(config_filename)?)?;
         let config = config.into_config(false);
 
-        let device = Device::Cpu;
-        let dtype = DType::F16;
+        let device = Device::cuda_if_available(0)?;
+        let dtype = DType::F64;
 
-        let filename = api.get("model.safetensors")?;
-        let vb = unsafe { VarBuilder::from_mmaped_safetensors(&[filename], dtype, &device)? };
+        let filename: Vec<std::path::PathBuf>;
+
+        // match the model_id, if its V32_3BInstruct then load the model from the local file system, otherwise load the model from the Hugging Face Hub
+        match model_id {
+            "meta-llama/Llama-3.2-3B-Instruct" => {
+                filename = hub_load_safetensors(&api, "model.safetensors.index.json")?;
+            }
+            _ => {
+                filename = vec![api.get("model.safetensors")?];
+            }
+        }
+
+        let vb = unsafe { VarBuilder::from_mmaped_safetensors(&filename, dtype, &device)? };
         let llama = Llama::load(vb, &config)?;
         let tokenizer = Tokenizer::from_file(tokenizer_filename).map_err(Error::msg)?;
 
@@ -239,8 +251,8 @@ impl Model {
         let mut logits_processor =
             LogitsProcessor::from_sampling(params.seed.unwrap_or(42), sampling);
 
-        let device = Device::Cpu;
-        let dtype = DType::F16;
+        let device = Device::cuda_if_available(0)?;
+        let dtype = DType::F64;
         let mut cache = Cache::new(true, dtype, &self.resources.config, &device)?;
 
         let start_gen = std::time::Instant::now();
@@ -367,8 +379,8 @@ impl Model {
         let mut logits_processor =
             LogitsProcessor::from_sampling(params.seed.unwrap_or(42), sampling);
 
-        let device = Device::Cpu;
-        let dtype = DType::F16;
+        let device = Device::cuda_if_available(0)?;
+        let dtype = DType::F64;
         let mut cache = Cache::new(true, dtype, &self.resources.config, &device)?;
 
         let start_gen = std::time::Instant::now();
