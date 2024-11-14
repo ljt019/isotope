@@ -5,10 +5,11 @@ use candle_nn::VarBuilder;
 use candle_transformers::generation::{LogitsProcessor, Sampling};
 use candle_transformers::models::llama::{Cache, Llama, LlamaConfig, LlamaEosToks};
 use hf_hub::{api::sync::ApiBuilder, Repo, RepoType};
-use serde::Deserialize;
 use std::sync::Arc;
 use tauri::Manager;
 use tokenizers::Tokenizer;
+
+use super::model_manager::{GenerationParams, Message};
 
 /// Constants used in the model
 const EOS_TOKEN: &str = "<|eot_id|>";
@@ -16,26 +17,6 @@ const BOS_TOKEN: &str = "<|begin_of_text|>";
 const DEFAULT_PROMPT: &str = "My favorite theorem is";
 const SYSTEM_PROMPT: &str = "You are a helpful coding assistant. Always strive to provide complete answers without abrupt endings.";
 const DEFAULT_MODEL: &str = "meta-llama/Llama-3.2-1B-Instruct";
-
-/// Represents a single message in a conversation
-#[derive(Debug, Deserialize)]
-pub struct Message {
-    role: String,
-    content: String,
-}
-
-/// Parameters for text generation
-#[derive(Debug, Deserialize)]
-pub struct GenerationParams {
-    pub messages: Option<Vec<Message>>,
-    pub temperature: Option<f64>,
-    pub top_p: Option<f64>,
-    pub top_k: Option<usize>,
-    pub max_tokens: Option<usize>,
-    pub seed: Option<u64>,
-    pub repeat_penalty: Option<f32>,
-    pub repeat_last_n: Option<usize>,
-}
 
 /// Holds the resources required by the model
 struct ModelResources {

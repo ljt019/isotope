@@ -1,6 +1,59 @@
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use strum::{EnumIter, IntoEnumIterator};
 use tauri_plugin_store::StoreBuilder;
+
+/// Represents a single message in a conversation
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Message {
+    pub role: String,
+    pub content: String,
+}
+
+/// Parameters for text generation
+#[derive(Debug, Deserialize, Serialize)]
+pub struct GenerationParams {
+    pub messages: Option<Vec<Message>>,
+    pub temperature: Option<f64>,
+    pub top_p: Option<f64>,
+    pub top_k: Option<usize>,
+    pub max_tokens: Option<usize>,
+    pub seed: Option<u64>,
+    pub repeat_penalty: Option<f32>,
+    pub repeat_last_n: Option<usize>,
+}
+
+// Define a static OnceLock for the default generation parameters
+static DEFAULT_GENERATION_PARAMS: std::sync::OnceLock<serde_json::Value> =
+    std::sync::OnceLock::new();
+
+fn get_default_generation_params() -> &'static serde_json::Value {
+    DEFAULT_GENERATION_PARAMS.get_or_init(|| {
+        json!(
+            {
+                "messages": null,
+                "temperature": 0.7,
+                "top_p": 0.9,
+                "top_k": 40,
+                "max_tokens": 2048,
+                "seed": null,
+                "repeat_penalty": 1.1,
+                "repeat_last_n": 1
+            }
+        )
+    })
+}
+
+/* DEFAULT_GENERATION_PARAMS
+    json!({
+        "temperature": 0.7,
+        "top_p": 0.9,
+        "top_k": 40,
+        "max_tokens": 2048,
+        "seed": null,
+        "repeat_penalty": 1.1
+    })
+*/
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, EnumIter)]
 pub enum ModelOptions {
@@ -84,6 +137,12 @@ impl ModelManager {
                 serde_json::to_value(default_model)?,
             )?;
 
+            // Initialize with default generation params
+            store.insert(
+                "generation_params".to_string(),
+                get_default_generation_params().clone(),
+            )?;
+
             // Save the new store
             store.save()?;
         }
@@ -118,5 +177,24 @@ impl ModelManager {
     pub fn get_selected_model_name(&self) -> Option<String> {
         self.get_selected_model()
             .map(|model| model.get_model_name())
+    }
+
+    pub fn get_generation_params(&self) -> Option<&serde_json::Value> {
+        let value = self.store.get("generation_params".to_string());
+
+        match value {
+            Some(value) => Some(value),
+            None => Some(get_default_generation_params()),
+        }
+    }
+
+    pub fn set_generation_params(
+        &mut self,
+        params: GenerationParams,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let value = serde_json::to_value(params)?;
+        self.store.insert("generation_params".to_string(), value)?;
+        self.store.save()?;
+        Ok(())
     }
 }
