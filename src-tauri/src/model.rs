@@ -130,7 +130,12 @@ impl Model {
     }
 
     /// Generates a response from the model based on the input message.
-    pub async fn chat(&self, message: &str, params: Option<GenerationParams>) -> Result<String> {
+    pub async fn chat(
+        &self,
+        app_handle: tauri::AppHandle,
+        message: &str,
+        params: Option<GenerationParams>,
+    ) -> Result<String> {
         let mut messages = vec![Message {
             role: "system".to_string(),
             content: self.system_prompt.clone(),
@@ -156,16 +161,9 @@ impl Model {
             return self.generate_response(params).await;
         }
 
-        let params = GenerationParams {
-            messages: Some(messages),
-            temperature: Some(0.2),
-            top_p: Some(0.9),
-            top_k: Some(50),
-            max_tokens: Some(500),
-            seed: Some(42),
-            repeat_penalty: Some(1.1),
-            repeat_last_n: Some(128),
-        };
+        let params = super::model_manager::ModelManager::init(app_handle)
+            .expect("failted to get thingy mabob")
+            .get_generation_params();
 
         self.generate_response(params).await
     }
@@ -181,6 +179,20 @@ impl Model {
             content: self.system_prompt.clone(),
         }];
 
+        let params = super::model_manager::ModelManager::init(app_handle.clone())
+            .expect("failted to get thingy mabob")
+            .get_generation_params();
+
+        // Append user messages if provided in params
+        match params.messages {
+            Some(provided_messages) => {
+                provided_messages
+                    .iter()
+                    .for_each(|msg| messages.push(msg.clone()));
+            }
+            None => {}
+        }
+
         if !message.is_empty() {
             messages.push(Message {
                 role: "user".to_string(),
@@ -189,17 +201,6 @@ impl Model {
         }
 
         let prompt = format_messages(&messages);
-
-        let params = GenerationParams {
-            messages: Some(messages),
-            temperature: Some(0.2),
-            top_p: Some(0.9),
-            top_k: Some(50),
-            max_tokens: Some(500),
-            seed: Some(42),
-            repeat_penalty: Some(1.1),
-            repeat_last_n: Some(128),
-        };
 
         // Encode the prompt
         let tokens = self

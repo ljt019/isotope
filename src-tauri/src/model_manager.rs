@@ -4,7 +4,7 @@ use strum::{EnumIter, IntoEnumIterator};
 use tauri_plugin_store::StoreBuilder;
 
 /// Represents a single message in a conversation
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Message {
     pub role: String,
     pub content: String,
@@ -179,13 +179,16 @@ impl ModelManager {
             .map(|model| model.get_model_name())
     }
 
-    pub fn get_generation_params(&self) -> Option<&serde_json::Value> {
-        let value = self.store.get("generation_params".to_string());
+    pub fn get_generation_params(&self) -> GenerationParams {
+        // Retrieve the stored Value or use the default
+        let params_value: serde_json::Value = self
+            .store
+            .get("generation_params".to_string())
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!(get_default_generation_params()));
 
-        match value {
-            Some(value) => Some(value),
-            None => Some(get_default_generation_params()),
-        }
+        // Deserialize the Value into GenerationParams
+        serde_json::from_value(params_value).expect("Failed to deserialize generation params")
     }
 
     pub fn set_generation_params(
