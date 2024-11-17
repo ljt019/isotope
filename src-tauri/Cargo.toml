@@ -29,6 +29,7 @@ dotenv = "0.15.0"
 window-shadows = "0.2.2"
 tauri-plugin-store = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
 strum = {version = "0.26.3", features = ["derive"] }
+rusqlite = { version = "0.32.1", features = ["bundled"] }
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
