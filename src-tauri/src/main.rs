@@ -2,8 +2,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod commands;
-mod model;
-mod model_manager;
+mod database;
+mod models;
 mod utils;
 
 use commands::*;
@@ -26,9 +26,11 @@ fn main() {
             let window = app.get_window("main").unwrap();
             set_shadow(&window, true).unwrap();
 
+            let app_handle = app.app_handle();
+
             // Perform initialization asynchronously
             tauri::async_runtime::spawn(async move {
-                setup();
+                setup(app_handle.config().as_ref());
 
                 load_main_app(&window);
             });
@@ -45,8 +47,6 @@ fn load_main_app(window: &tauri::Window) {
         .unwrap();
 }
 
-fn setup() {
-    println!("Initializing...");
-    std::thread::sleep(std::time::Duration::from_secs(4)); // Simulate a delay
-    println!("Done initializing.");
+fn setup(config: &tauri::Config) {
+    database::setup_database(&config);
 }
