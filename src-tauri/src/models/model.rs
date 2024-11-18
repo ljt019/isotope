@@ -78,7 +78,7 @@ impl ModelResources {
 /// Formats messages into a single prompt string
 /// Formats messages into a single prompt string.
 /// Only the user message is wrapped with BOS_TOKEN and EOS_TOKEN.
-fn format_messages(messages: &[Message]) -> String {
+pub fn format_messages(messages: &[Message]) -> String {
     let mut formatted_messages = Vec::new();
 
     for msg in messages {
@@ -170,9 +170,12 @@ impl Model {
 
     pub async fn chat_stream(
         &self,
-        message: &str,
+        user_prompt: &str,
         app_handle: &tauri::AppHandle,
     ) -> Result<(), anyhow::Error> {
+        // Setup the database connection
+        let connection = crate::database::setup_database(app_handle.config().as_ref());
+
         // Initialize messages with system prompt
         let mut messages = vec![Message {
             role: "system".to_string(),
@@ -193,10 +196,10 @@ impl Model {
             None => {}
         }
 
-        if !message.is_empty() {
+        if !user_prompt.is_empty() {
             messages.push(Message {
                 role: "user".to_string(),
-                content: message.to_string(),
+                content: user_prompt.to_string(),
             });
         }
 
@@ -319,6 +322,31 @@ impl Model {
                 }),
             )
             .map_err(|e| anyhow::anyhow!("Failed to emit completion event: {}", e));
+
+        // Combine the tokens into a single string
+        let generated_text = self
+            .resources
+            .tokenizer
+            .decode(&token_output, true)
+            .map_err(|e| anyhow::anyhow!("Decoding error: {}", e))?;
+
+        // Save the generated text to the database along with the user prompt (user: user_prompt, assistant: generated_text)
+        let mut messages = vec![
+            Message {
+                role: "user".to_string(),
+                content: user_prompt.to_string(),
+            },
+            Message {
+                role: "assistant".to_string(),
+                content: generated_text.clone(),
+            },
+        ];
+
+        crate::database::insert_message_into_chat(
+            &connection,
+            crate::database::most_recent_chat(&connection),
+            &mut messages,
+        );
 
         Ok(())
     }

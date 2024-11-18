@@ -48,5 +48,10 @@ fn load_main_app(window: &tauri::Window) {
 }
 
 fn setup(config: &tauri::Config) {
-    database::setup_database(&config);
+    let connection = database::setup_database(&config);
+
+    let random_number = rand::random::<u32>();
+
+    crate::database::insert_chat(&connection, format!("Chat {}", random_number))
+        .expect("Failed to insert chat");
 }

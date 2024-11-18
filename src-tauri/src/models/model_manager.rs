@@ -108,6 +108,7 @@ impl Default for ModelOptions {
 
 pub struct ModelManager {
     store: tauri_plugin_store::Store<tauri::Wry>,
+    database: rusqlite::Connection,
 }
 
 impl ModelManager {
@@ -124,7 +125,7 @@ impl ModelManager {
         let store_path = data_dir.join("model_manager.bin");
         println!("Store path: {:?}", store_path);
 
-        let mut store = StoreBuilder::new(app_handle, store_path).build();
+        let mut store = StoreBuilder::new(app_handle.clone(), store_path).build();
 
         // Try to load existing store, create new one if failed
         if let Err(e) = store.load() {
@@ -147,7 +148,9 @@ impl ModelManager {
             store.save()?;
         }
 
-        Ok(Self { store })
+        let database = crate::database::setup_database(&app_handle.config());
+
+        Ok(Self { store, database })
     }
 
     pub fn get_selected_model(&self) -> Option<ModelOptions> {
@@ -188,7 +191,19 @@ impl ModelManager {
             .unwrap_or_else(|| serde_json::json!(get_default_generation_params()));
 
         // Deserialize the Value into GenerationParams
-        serde_json::from_value(params_value).expect("Failed to deserialize generation params")
+        let params: GenerationParams =
+            serde_json::from_value(params_value).expect("Failed to deserialize generation params");
+
+        // Get messages from the database and add them to the params
+        let messages = crate::database::get_chat_messages(
+            &self.database,
+            crate::database::most_recent_chat(&self.database),
+        );
+
+        GenerationParams {
+            messages: Some(messages),
+            ..params
+        }
     }
 
     pub fn set_generation_params(

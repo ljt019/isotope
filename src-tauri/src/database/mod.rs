@@ -1,9 +1,13 @@
+use crate::models::model_manager::Message;
+use rusqlite::named_params;
+use rusqlite::params;
+
 pub fn setup_database(config: &tauri::Config) -> rusqlite::Connection {
     // Get database directory
     let data_dir = tauri::api::path::app_data_dir(config).unwrap();
     let db_path = data_dir.join("database.db");
 
-    // Check if databse exists
+    // Check if database exists
     let db_exists = db_path.exists();
 
     // Open connection (creates database if it doesn't exist)
@@ -14,28 +18,126 @@ pub fn setup_database(config: &tauri::Config) -> rusqlite::Connection {
         create_tables(&connection);
     }
 
+    // Check if chats table exists
+    let table_exists = connection
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='chats'")
+        .unwrap()
+        .query_map([], |row| Ok(row.get(0)?))
+        .unwrap()
+        .map(|table_name: rusqlite::Result<String>| table_name.unwrap())
+        .next()
+        .is_some();
+
+    // If chats table doesn't exist, create it
+    if !table_exists {
+        create_tables(&connection);
+    }
+
     // Return connection to database
     connection
 }
 
-/*
-
-Needed Tables:
-
-Generation params
-
-
-*/
+#[derive(Debug)]
+pub struct Chat {
+    pub id: i64,
+    pub name: String,
+    pub created_at: String,
+    pub messages: Vec<Message>,
+}
 
 pub fn create_tables(connection: &rusqlite::Connection) {
     connection
         .execute(
-            "CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY,
-            username TEXT NOT NULL,
-            password TEXT NOT NULL
-        )",
+            "CREATE TABLE chats (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                messages TEXT NOT NULL
+            )",
             [],
         )
         .unwrap();
+}
+
+pub fn insert_chat(connection: &rusqlite::Connection, name: String) -> rusqlite::Result<i64> {
+    // Create timestamp in ISO 8601 format
+    let timestamp = chrono::Local::now().to_rfc3339();
+
+    // Initialize empty vec of Messages and serialize to JSON string
+    let empty_messages = serde_json::to_string(&Vec::<Message>::new()).unwrap();
+
+    // Using named parameters for better readability
+    connection.execute(
+        "INSERT INTO chats (name, created_at, messages) VALUES (:name, :created_at, :messages)",
+        named_params! {
+            ":name": name,
+            ":created_at": timestamp,
+            ":messages": empty_messages,
+        },
+    )?;
+
+    // Return the ID of the last inserted row
+    Ok(connection.last_insert_rowid())
+}
+
+pub fn insert_message_into_chat(
+    connection: &rusqlite::Connection,
+    id: i64,
+    messages: &mut Vec<Message>,
+) {
+    // Get the chat
+    let mut chat = get_chat(connection, id);
+
+    // Add the new messages to the chat without overwriting the old ones
+    chat.messages.append(messages);
+
+    // Update the chat in the database
+    connection
+        .execute(
+            "UPDATE chats SET messages = ?1 WHERE id = ?2",
+            params![serde_json::to_string(&chat.messages).unwrap(), id],
+        )
+        .unwrap();
+}
+
+pub fn get_chat(connection: &rusqlite::Connection, id: i64) -> Chat {
+    let mut statement = connection
+        .prepare("SELECT * FROM chats WHERE id = ?1")
+        .unwrap();
+
+    let chat_iter = statement
+        .query_map(params![id], |row| {
+            let messages_str: String = row.get(3)?;
+            let messages = match serde_json::from_str(&messages_str) {
+                Ok(msgs) => msgs,
+                Err(_) => Vec::new(), // Return empty vec if parsing fails
+            };
+
+            Ok(Chat {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                created_at: row.get(2)?,
+                messages,
+            })
+        })
+        .unwrap();
+
+    let x = chat_iter.map(|chat| chat.unwrap()).next().unwrap();
+    x
+}
+
+pub fn get_chat_messages(connection: &rusqlite::Connection, id: i64) -> Vec<Message> {
+    let chat = get_chat(connection, id);
+    chat.messages
+}
+
+pub fn most_recent_chat(connection: &rusqlite::Connection) -> i64 {
+    let mut statement = connection
+        .prepare("SELECT id FROM chats ORDER BY id DESC LIMIT 1")
+        .unwrap();
+
+    let chat_iter = statement.query_map([], |row| Ok(row.get(0)?)).unwrap();
+
+    let x = chat_iter.map(|chat| chat.unwrap()).next().unwrap();
+    x
 }
