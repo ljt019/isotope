@@ -1,3 +1,5 @@
+use crate::types::LLM;
+use crate::types::{InferenceParams, Message};
 use crate::utils::hub_load_safetensors;
 use anyhow::{Error, Result};
 use candle_core::{DType, Device, Tensor};
@@ -9,8 +11,6 @@ use std::sync::Arc;
 use tauri::Manager;
 use tokenizers::Tokenizer;
 
-use super::model_manager::{GenerationParams, Message};
-
 /// Constants used in the model
 const EOS_TOKEN: &str = "<|eot_id|>";
 const BOS_TOKEN: &str = "<|begin_of_text|>";
@@ -19,13 +19,13 @@ const SYSTEM_PROMPT: &str = "You are a helpful coding assistant. Always strive t
 const DEFAULT_MODEL: &str = "meta-llama/Llama-3.2-1B-Instruct";
 
 /// Holds the resources required by the model
-struct ModelResources {
+struct LlamaModelResources {
     llama: Llama,
     tokenizer: Tokenizer,
     config: candle_transformers::models::llama::Config,
 }
 
-impl ModelResources {
+impl LlamaModelResources {
     /// Loads the model resources from the Hugging Face Hub
     async fn load(model_id: &str) -> Result<Self> {
         let api = ApiBuilder::new()
@@ -75,9 +75,7 @@ impl ModelResources {
     }
 }
 
-/// Formats messages into a single prompt string
 /// Formats messages into a single prompt string.
-/// Only the user message is wrapped with BOS_TOKEN and EOS_TOKEN.
 pub fn format_messages(messages: &[Message]) -> String {
     let mut formatted_messages = Vec::new();
 
@@ -109,13 +107,57 @@ pub fn format_messages(messages: &[Message]) -> String {
 }
 
 /// The main Model struct encapsulating the Llama model and tokenizer
-pub struct Model {
+pub struct LlamaModel {
     model_id: String,
     resources: Arc<ModelResources>,
     system_prompt: String,
 }
 
-impl Model {
+impl LLM for LlamaModel {
+    fn inference(&self, params: GenerationParams) -> String {
+        match self.generate_response(params) {
+            Ok(response) => response,
+            Err(e) => {
+                eprintln!("Error generating response: {}", e);
+                "Error generating response".to_string()
+            }
+        }
+    }
+
+    //
+    fn format_prompt(&self, messages: Vec<Message>) -> String {
+        let mut formatted_messages = Vec::new();
+
+        // Formats messages into a single prompt string.
+        for msg in messages {
+            match msg.role.as_str() {
+                "system" => {
+                    // Include system messages without special tokens
+                    formatted_messages.push(format!("System:\n{}", msg.content));
+                }
+                "user" => {
+                    // Wrap user messages with BOS_TOKEN and EOS_TOKEN
+                    formatted_messages.push(format!("{}{}{}", BOS_TOKEN, msg.content, EOS_TOKEN));
+                }
+                "assistant" => {
+                    // Include assistant messages without special tokens
+                    formatted_messages.push(format!("Assistant:\n{}", msg.content));
+                }
+                _ => {
+                    // Handle any other roles generically
+                    formatted_messages.push(format!("{}:\n{}", msg.role, msg.content));
+                }
+            }
+        }
+
+        // Append "Assistant:" to signal the model to generate a response
+        formatted_messages.push("Assistant:".to_string());
+
+        formatted_messages.join("\n\n") // Clear separation between messages
+    }
+}
+
+impl LlamaModel {
     /// Initializes the Model by loading the specified model.
     /// It handles downloading and caching as necessary.
     pub async fn new(model_id: Option<&str>) -> Result<Self> {
@@ -129,46 +171,7 @@ impl Model {
         })
     }
 
-    /// Generates a response from the model based on the input message.
     pub async fn chat(
-        &self,
-        app_handle: tauri::AppHandle,
-        message: &str,
-        params: Option<GenerationParams>,
-    ) -> Result<String> {
-        let mut messages = vec![Message {
-            role: "system".to_string(),
-            content: self.system_prompt.clone(),
-        }];
-
-        if !message.is_empty() {
-            messages.push(Message {
-                role: "user".to_string(),
-                content: message.to_string(),
-            });
-        }
-
-        if let Some(provided_params) = params {
-            if let Some(mut provided_messages) = provided_params.messages {
-                messages.append(&mut provided_messages);
-            }
-
-            let params = GenerationParams {
-                messages: Some(messages),
-                ..provided_params
-            };
-
-            return self.generate_response(params).await;
-        }
-
-        let params = super::model_manager::ModelManager::init(app_handle)
-            .expect("failted to get thingy mabob")
-            .get_generation_params();
-
-        self.generate_response(params).await
-    }
-
-    pub async fn chat_stream(
         &self,
         user_prompt: &str,
         app_handle: &tauri::AppHandle,
@@ -182,9 +185,12 @@ impl Model {
             content: self.system_prompt.clone(),
         }];
 
-        let params = super::model_manager::ModelManager::init(app_handle.clone())
-            .expect("failted to get thingy mabob")
-            .get_generation_params();
+        // Get the model manager from the managed app state using the app handle
+        let model_manager = app_handle
+            .state::<crate::model_manager::ModelManager>()
+            .expect("failed to get model manager");
+
+        let params = model_manager.get_generation_params();
 
         // Append user messages if provided in params
         match params.messages {
@@ -203,6 +209,10 @@ impl Model {
             });
         }
 
+        // Convert message from a vector into a slice.
+        let messages: [messages] = messages.as_slice();
+
+        // Format the messages into a single prompt string
         let prompt = format_messages(&messages);
 
         // Encode the prompt

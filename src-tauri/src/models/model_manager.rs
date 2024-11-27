@@ -1,218 +1,67 @@
-use serde::{Deserialize, Serialize};
-use serde_json::json;
-use strum::{EnumIter, IntoEnumIterator};
-use tauri_plugin_store::StoreBuilder;
+use crate::models::chat_manager::ChatManager;
+use crate::models::inference_params_manager::InferenceParamsManager;
+use crate::types::LLM;
 
-/// Represents a single message in a conversation
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct Message {
-    pub role: String,
-    pub content: String,
-}
-
-/// Parameters for text generation
-#[derive(Debug, Deserialize, Serialize)]
-pub struct GenerationParams {
-    pub messages: Option<Vec<Message>>,
-    pub temperature: Option<f64>,
-    pub top_p: Option<f64>,
-    pub top_k: Option<usize>,
-    pub max_tokens: Option<usize>,
-    pub seed: Option<u64>,
-    pub repeat_penalty: Option<f32>,
-    pub repeat_last_n: Option<usize>,
-}
-
-// Define a static OnceLock for the default generation parameters
-static DEFAULT_GENERATION_PARAMS: std::sync::OnceLock<serde_json::Value> =
-    std::sync::OnceLock::new();
-
-fn get_default_generation_params() -> &'static serde_json::Value {
-    DEFAULT_GENERATION_PARAMS.get_or_init(|| {
-        json!(
-            {
-                "messages": null,
-                "temperature": 0.7,
-                "top_p": 0.9,
-                "top_k": 40,
-                "max_tokens": 2048,
-                "seed": null,
-                "repeat_penalty": 1.1,
-                "repeat_last_n": 1
-            }
-        )
-    })
-}
-
-/* DEFAULT_GENERATION_PARAMS
-    json!({
-        "temperature": 0.7,
-        "top_p": 0.9,
-        "top_k": 40,
-        "max_tokens": 2048,
-        "seed": null,
-        "repeat_penalty": 1.1
-    })
-*/
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, EnumIter)]
-pub enum ModelOptions {
-    V32_3BInstruct,
-    V32_1BInstruct,
-    SmolLM2_135MInstruct,
-    SmolLM2_360MInstruct,
-    SmolLM2_1BInstruct,
-    TinyLlama1_1BChat,
-}
-
-impl ModelOptions {
-    pub fn get_model_name(&self) -> String {
-        match self {
-            ModelOptions::V32_3BInstruct => "meta-llama/Llama-3.2-3B-Instruct".to_string(),
-            ModelOptions::V32_1BInstruct => "meta-llama/Llama-3.2-1B-Instruct".to_string(),
-            ModelOptions::SmolLM2_135MInstruct => "HuggingFaceTB/SmolLM2-135M-Instruct".to_string(),
-            ModelOptions::SmolLM2_360MInstruct => "HuggingFaceTB/SmolLM2-360M-Instruct".to_string(),
-            ModelOptions::SmolLM2_1BInstruct => "HuggingFaceTB/SmolLM2-1.7B-Instruct".to_string(),
-            ModelOptions::TinyLlama1_1BChat => "TinyLlama/TinyLlama-1.1B-Chat-v1.0".to_string(),
-        }
-    }
-
-    pub fn from_model_name(name: &str) -> Option<Self> {
-        match name {
-            "meta-llama/Llama-3.2-3B-Instruct" => Some(Self::V32_3BInstruct),
-            "meta-llama/Llama-3.2-1B-Instruct" => Some(Self::V32_1BInstruct),
-            "HuggingFaceTB/SmolLM2-135M-Instruct" => Some(Self::SmolLM2_135MInstruct),
-            "HuggingFaceTB/SmolLM2-360M-Instruct" => Some(Self::SmolLM2_360MInstruct),
-            "HuggingFaceTB/SmolLM2-1.7B-Instruct" => Some(Self::SmolLM2_1BInstruct),
-            "TinyLlama/TinyLlama-1.1B-Chat-v1.0" => Some(Self::TinyLlama1_1BChat),
-            _ => None,
-        }
-    }
-
-    // Returns a Vec of all variants
-    pub fn all() -> Vec<Self> {
-        Self::iter().collect()
-    }
-
-    // Returns a Vec of all model names
-    pub fn all_model_names() -> Vec<String> {
-        Self::iter().map(|model| model.get_model_name()).collect()
-    }
-}
-
-impl Default for ModelOptions {
-    fn default() -> Self {
-        Self::V32_1BInstruct
-    }
-}
-
+/// Manages the active model, chat history, and inference parameters
 pub struct ModelManager {
-    store: tauri_plugin_store::Store<tauri::Wry>,
-    database: rusqlite::Connection,
+    model: Box<dyn LLM>,
+    inference_params_manager: InferenceParamsManager,
+    chat_manager: ChatManager,
 }
 
 impl ModelManager {
-    pub fn init(app_handle: tauri::AppHandle) -> Result<Self, Box<dyn std::error::Error>> {
-        // Get the app data directory
-        let data_dir = tauri::api::path::app_data_dir(&app_handle.config())
-            .expect("Failed to get app data directory");
+    /// Create a new ModelManager with the given model and database connection
+    pub fn new(app_handle: tauri::AppHandle, db_conn: rusqlite::Connection) -> Self {
+        // Create a new inference params manager and chat manager
+        let inference_params_manager = InferenceParamsManager::new(app_handle);
+        let chat_manager = ChatManager::new(db_conn);
 
-        println!("Data dir: {:?}", data_dir);
-
-        // Create directory if it doesn't exist
-        std::fs::create_dir_all(&data_dir)?;
-
-        let store_path = data_dir.join("model_manager.bin");
-        println!("Store path: {:?}", store_path);
-
-        let mut store = StoreBuilder::new(app_handle.clone(), store_path).build();
-
-        // Try to load existing store, create new one if failed
-        if let Err(e) = store.load() {
-            println!("Failed to load store: {:?}, creating new store", e);
-
-            // Initialize with default model
-            let default_model = ModelOptions::default();
-            store.insert(
-                "selected_model".to_string(),
-                serde_json::to_value(default_model)?,
-            )?;
-
-            // Initialize with default generation params
-            store.insert(
-                "generation_params".to_string(),
-                get_default_generation_params().clone(),
-            )?;
-
-            // Save the new store
-            store.save()?;
-        }
-
-        let database = crate::database::setup_database(&app_handle.config());
-
-        Ok(Self { store, database })
-    }
-
-    pub fn get_selected_model(&self) -> Option<ModelOptions> {
-        let selected_model = self.store.get("selected_model".to_string());
-
-        match selected_model {
-            Some(value) => {
-                // Attempt to deserialize the stored value into ModelOptions
-                serde_json::from_value(value.clone()).ok()
+        // Create a new model based on the selected model or the default model
+        match inference_params_manager.get_current_model() {
+            Some(model_name) => {
+                // Load the model with the name in the inference params
+                model = super::llama_models::Model::new(model_name);
             }
-            None => None,
+            None => {
+                // Load the default model if no model is returned
+                model = super::llama_models::Model::new(None);
+            }
+        }
+
+        // Return the new ModelManager
+        Self {
+            model: Box::new(model),
+            chat_manager: chat_manager,
+            inference_params_manager,
         }
     }
 
-    pub fn set_selected_model(
-        &mut self,
-        model: ModelOptions,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        // Serialize the enum directly
-        let value = serde_json::to_value(model)?;
-        self.store.insert("selected_model".to_string(), value)?;
-        self.store.save()?;
-        Ok(())
-    }
+    /// Chat with the model, with the given prompt
+    pub fn chat(&mut self, prompt: String) {
+        // Create a message from the user input
+        let prompt = crate::types::Message {
+            role: "user".to_string(),
+            content: prompt,
+        };
 
-    // Helper method to get the actual model name string
-    pub fn get_selected_model_name(&self) -> Option<String> {
-        self.get_selected_model()
-            .map(|model| model.get_model_name())
-    }
+        // Handle database stuff and get full prompt, including chat history
+        let full_chat_prompt = self.chat_manager.handle_prompt(prompt);
 
-    pub fn get_generation_params(&self) -> GenerationParams {
-        // Retrieve the stored Value or use the default
-        let params_value: serde_json::Value = self
-            .store
-            .get("generation_params".to_string())
-            .cloned()
-            .unwrap_or_else(|| serde_json::json!(get_default_generation_params()));
+        // Format the prompt for the model
+        let formatted_prompt = self.model.format_prompt(full_chat_prompt);
 
-        // Deserialize the Value into GenerationParams
-        let params: GenerationParams =
-            serde_json::from_value(params_value).expect("Failed to deserialize generation params");
+        // Get the inference params from the store
+        let inference_params = self
+            .inference_params_manager
+            .get_inference_params_with_prompt(formatted_prompt);
 
-        // Get messages from the database and add them to the params
-        let messages = crate::database::get_chat_messages(
-            &self.database,
-            crate::database::most_recent_chat(&self.database),
-        );
+        // Feed the params to the model and get the response
+        let response = crate::types::Message {
+            role: "assistant".to_string(),
+            content: self.model.inference(inference_params),
+        };
 
-        GenerationParams {
-            messages: Some(messages),
-            ..params
-        }
-    }
-
-    pub fn set_generation_params(
-        &mut self,
-        params: GenerationParams,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let value = serde_json::to_value(params)?;
-        self.store.insert("generation_params".to_string(), value)?;
-        self.store.save()?;
-        Ok(())
+        // Add the response to the chat history
+        self.chat_manager.handle_response(response);
     }
 }

@@ -1,4 +1,3 @@
-use crate::models::model_manager::Message;
 use rusqlite::named_params;
 use rusqlite::params;
 
@@ -42,7 +41,7 @@ pub struct Chat {
     pub id: i64,
     pub name: String,
     pub created_at: String,
-    pub messages: Vec<Message>,
+    pub messages: Vec<crate::types::Message>,
 }
 
 pub fn create_tables(connection: &rusqlite::Connection) {
@@ -64,7 +63,7 @@ pub fn insert_chat(connection: &rusqlite::Connection, name: String) -> rusqlite:
     let timestamp = chrono::Local::now().to_rfc3339();
 
     // Initialize empty vec of Messages and serialize to JSON string
-    let empty_messages = serde_json::to_string(&Vec::<Message>::new()).unwrap();
+    let empty_messages = serde_json::to_string(&Vec::<crate::types::Message>::new()).unwrap();
 
     // Using named parameters for better readability
     connection.execute(
@@ -83,13 +82,13 @@ pub fn insert_chat(connection: &rusqlite::Connection, name: String) -> rusqlite:
 pub fn insert_message_into_chat(
     connection: &rusqlite::Connection,
     id: i64,
-    messages: &mut Vec<Message>,
+    new_messages: &[crate::types::Message],
 ) {
     // Get the chat
     let mut chat = get_chat(connection, id);
 
     // Add the new messages to the chat without overwriting the old ones
-    chat.messages.append(messages);
+    chat.messages.push(new_messages.clone());
 
     // Update the chat in the database
     connection
@@ -126,18 +125,49 @@ pub fn get_chat(connection: &rusqlite::Connection, id: i64) -> Chat {
     x
 }
 
-pub fn get_chat_messages(connection: &rusqlite::Connection, id: i64) -> Vec<Message> {
+pub fn get_chat_messages(connection: &rusqlite::Connection, id: i64) -> Vec<crate::types::Message> {
     let chat = get_chat(connection, id);
     chat.messages
 }
 
-pub fn most_recent_chat(connection: &rusqlite::Connection) -> i64 {
-    let mut statement = connection
-        .prepare("SELECT id FROM chats ORDER BY id DESC LIMIT 1")
-        .unwrap();
+pub fn get_all_chats(connection: &rusqlite::Connection) -> rusqlite::Result<Vec<Chat>> {
+    let mut statement = connection.prepare("SELECT * FROM chats")?;
 
-    let chat_iter = statement.query_map([], |row| Ok(row.get(0)?)).unwrap();
+    let chats_iter = statement.query_map([], |row| {
+        let messages_str: String = row.get(3)?;
+        let messages = match serde_json::from_str(&messages_str) {
+            Ok(msgs) => msgs,
+            Err(_) => Vec::new(), // Return empty vec if parsing fails
+        };
 
-    let x = chat_iter.map(|chat| chat.unwrap()).next().unwrap();
-    x
+        Ok(Chat {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            created_at: row.get(2)?,
+            messages,
+        })
+    })?;
+
+    let mut chats = Vec::new();
+    for chat in chats_iter {
+        chats.push(chat?);
+    }
+
+    Ok(chats)
+}
+
+// Get the ID of the most recent chat
+// Returns None if no chats exist
+pub fn get_most_recent_chat(
+    connection: &rusqlite::Connection,
+) -> Result<Option<i64>, rusqlite::Error> {
+    let mut statement = connection.prepare("SELECT id FROM chats ORDER BY id DESC LIMIT 1")?;
+
+    let mut rows = statement.query([])?;
+
+    // next() returns Option<Result<Row, Error>>
+    match rows.next()? {
+        Some(row) => Ok(Some(row.get::<_, i64>(0)?)),
+        None => Ok(None),
+    }
 }
