@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { listen } from "@tauri-apps/api/event";
+import queryClient from "@/App";
 
 export function Index() {
   const [prompt, setPrompt] = useState("");
@@ -71,7 +72,8 @@ export function Index() {
     setResponse("");
 
     try {
-      await invoke("chat", { message: prompt });
+      await invoke("chat", { prompt: prompt });
+      console.log(await invoke("get_current_chat"));
     } catch (error) {
       console.error("Invocation error:", error);
       setIsGenerating(false);
@@ -87,9 +89,9 @@ export function Index() {
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground pb-3">
-      <Card className="flex flex-col h-full rounded-none border-0">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-2xl font-bold">
+      <Card className="flex flex-col h-full rounded-none border-0 ">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 ">
+          <CardTitle className="text-2xl font-bold ">
             <div className="flex">
               <img
                 src="/ollama.svg"
@@ -187,7 +189,7 @@ function SelectModel() {
 
   async function setOption(modelName: string) {
     try {
-      await invoke("set_model", { modelName: modelName });
+      await invoke("set_model", { modelSelection: modelName });
       await refetchSelectedModel();
     } catch (error) {
       console.error("Error setting model:", error);

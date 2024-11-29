@@ -39,12 +39,12 @@ function Layout({ children }: { children: JSX.Element }) {
   return (
     <>
       <TitleBar />
-      <div className="pt-6 overflow-hidden h-screen">{children}</div>
+      <div className="overflow-hidden h-screen">{children}</div>
     </>
   );
 }
 
-const queryClient = new QueryClient();
+export const queryClient = new QueryClient();
 
 function App() {
   return (

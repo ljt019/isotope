@@ -1,2 +1,2 @@
-mod llama_models;
-mod llama_options;
+pub mod llama_models;
+pub mod llama_options;

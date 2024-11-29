@@ -4,6 +4,7 @@ pub mod llama;
 pub mod model_manager;
 
 pub trait LLM {
-    fn inference(&self, params: InferenceParams) -> String;
-    fn format_prompt(&self, prompt: Vec<Message>) -> String;
+    fn inference(&self, params: crate::models::inference_params_manager::InferenceParams)
+        -> String;
+    fn format_prompt(&self, prompt: Vec<crate::models::chat_manager::Message>) -> String;
 }

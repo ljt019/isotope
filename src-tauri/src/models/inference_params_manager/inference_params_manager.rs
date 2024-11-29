@@ -1,4 +1,5 @@
 use super::InferenceParams;
+use tauri_plugin_store::JsonValue;
 use tauri_plugin_store::StoreBuilder;
 
 pub struct InferenceParamsManager {
@@ -22,23 +23,25 @@ impl InferenceParamsManager {
     }
 
     pub fn get_current_model_value(&self) -> Option<String> {
-        // Get the selected model from the store
-        let selected_model = self.store.get("selected_model");
+        // Get and deserialize the selected model into a String
+        let params = self.get_inference_params();
 
-        // Deserialize the selected model
-        let derserialized_value = serde_json::from_value(selected_model);
+        // Get model option from inference params
+        let selected_model = params.model.clone();
 
-        // Create a model option
-        let mut model_option = crate::models::model_options::ModelOptions::new();
+        println!("Selected model: {:?}", selected_model);
 
-        // Get the model option from the deserialized value
-        let model_option = crate::models::model_options::ModelOptions::get_model_type(model_option);
+        // Get Model Option from string
+        let model_option =
+            crate::models::llama::llama_options::LlamaOptions::from_model_option_string(
+                selected_model.as_str(),
+            );
 
-        // Return the selected model or None if it doesn't exist
-        match derserialized_value {
-            Ok(model) => Some(model),
-            Err(_) => None,
-        }
+        let model_value = model_option
+            .expect("Failed to get current model value")
+            .get_model_name();
+
+        Some(model_value)
     }
 
     pub fn get_inference_params_with_prompt(&self, prompt: String) -> InferenceParams {
@@ -51,9 +54,24 @@ impl InferenceParamsManager {
         inference_params
     }
 
+    pub fn set_model(&mut self, model: crate::models::llama::llama_options::LlamaOptions) {
+        // Update the store with the new model
+        self.store
+            .insert(
+                "selected_model".to_string(),
+                serde_json::to_value(model.get_model_name()).expect("Failed to serialize model"),
+            )
+            .expect("Failed to insert new model into store");
+    }
+
     pub fn set_inference_params(&mut self, params: InferenceParams) {
         // Update the store with the new inference params
-        todo!();
+        self.store
+            .insert(
+                "generation_params".to_string(),
+                serde_json::to_value(&params).unwrap(),
+            )
+            .expect("Failed to insert new inference params into store");
 
         // Update the in memory inference params
         self.inference_params = params;
@@ -68,7 +86,7 @@ fn create_store(app_handle: tauri::AppHandle) -> tauri_plugin_store::Store<tauri
     println!("Data dir: {:?}", data_dir);
 
     // Create directory if it doesn't exist
-    std::fs::create_dir_all(&data_dir)?;
+    std::fs::create_dir_all(&data_dir).expect("Failed to create data directory");
 
     let store_path = data_dir.join("isotope_store.bin");
     println!("Store path: {:?}", store_path);
@@ -80,25 +98,37 @@ fn create_store(app_handle: tauri::AppHandle) -> tauri_plugin_store::Store<tauri
         println!("Failed to load store: {:?}, creating new store", e);
 
         // Initialize with default model
-        let default_model = ModelOptions::default();
-        store.insert(
-            "selected_model".to_string(),
-            serde_json::to_value(default_model)?,
-        )?;
+        let default_model = crate::models::llama::llama_options::LlamaOptions::default_model();
+        store
+            .insert(
+                "selected_model".to_string(),
+                serde_json::to_value(default_model).expect("Failed to serialize default model"),
+            )
+            .expect("Failed to insert default model into store");
 
         // Initialize with default generation params
-        store.insert(
-            "generation_params".to_string(),
-            get_default_generation_params().clone(),
-        )?;
+        store
+            .insert(
+                "generation_params".to_string(),
+                get_default_generation_params(),
+            )
+            .expect("Failed to insert default generation params into store");
 
         // Save the new store
-        store.save()?;
+        store.save().expect("Failed to save new store");
     }
 
     store
 }
 
 fn get_params() -> InferenceParams {
-    todo!();
+    let params = InferenceParams::default();
+
+    params
+}
+
+fn get_default_generation_params() -> JsonValue {
+    let params = InferenceParams::default();
+
+    serde_json::to_value(params).expect("Failed to serialize default generation params")
 }

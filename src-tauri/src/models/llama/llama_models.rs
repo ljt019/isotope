@@ -1,5 +1,4 @@
-use crate::types::LLM;
-use crate::types::{InferenceParams, Message};
+use crate::models::{chat_manager::Message, inference_params_manager::InferenceParams};
 use crate::utils::hub_load_safetensors;
 use anyhow::{Error, Result};
 use candle_core::{DType, Device, Tensor};
@@ -67,7 +66,7 @@ impl LlamaModelResources {
         let llama = Llama::load(vb, &config)?;
         let tokenizer = Tokenizer::from_file(tokenizer_filename).map_err(Error::msg)?;
 
-        Ok(ModelResources {
+        Ok(LlamaModelResources {
             llama,
             tokenizer,
             config,
@@ -109,13 +108,13 @@ pub fn format_messages(messages: &[Message]) -> String {
 /// The main Model struct encapsulating the Llama model and tokenizer
 pub struct LlamaModel {
     model_id: String,
-    resources: Arc<ModelResources>,
+    resources: Arc<LlamaModelResources>,
     system_prompt: String,
 }
 
-impl LLM for LlamaModel {
-    fn inference(&self, params: GenerationParams) -> String {
-        match self.generate_response(params) {
+impl LlamaModel {
+    pub async fn inference(&self, params: InferenceParams, app_handle: tauri::AppHandle) -> String {
+        match self.chat(params, app_handle).await {
             Ok(response) => response,
             Err(e) => {
                 eprintln!("Error generating response: {}", e);
@@ -125,7 +124,7 @@ impl LLM for LlamaModel {
     }
 
     //
-    fn format_prompt(&self, messages: Vec<Message>) -> String {
+    pub fn format_prompt(&self, messages: Vec<Message>) -> String {
         let mut formatted_messages = Vec::new();
 
         // Formats messages into a single prompt string.
@@ -163,7 +162,7 @@ impl LlamaModel {
     pub async fn new(model_id: Option<&str>) -> Result<Self> {
         let model_id = model_id.unwrap_or(DEFAULT_MODEL);
         println!("Loading model: {}", model_id);
-        let resources = ModelResources::load(model_id).await?;
+        let resources = LlamaModelResources::load(model_id).await?;
         Ok(Self {
             model_id: model_id.to_string(),
             resources: Arc::new(resources),
@@ -173,53 +172,14 @@ impl LlamaModel {
 
     pub async fn chat(
         &self,
-        user_prompt: &str,
-        app_handle: &tauri::AppHandle,
-    ) -> Result<(), anyhow::Error> {
-        // Setup the database connection
-        let connection = crate::database::setup_database(app_handle.config().as_ref());
-
-        // Initialize messages with system prompt
-        let mut messages = vec![Message {
-            role: "system".to_string(),
-            content: self.system_prompt.clone(),
-        }];
-
-        // Get the model manager from the managed app state using the app handle
-        let model_manager = app_handle
-            .state::<crate::model_manager::ModelManager>()
-            .expect("failed to get model manager");
-
-        let params = model_manager.get_generation_params();
-
-        // Append user messages if provided in params
-        match params.messages {
-            Some(provided_messages) => {
-                provided_messages
-                    .iter()
-                    .for_each(|msg| messages.push(msg.clone()));
-            }
-            None => {}
-        }
-
-        if !user_prompt.is_empty() {
-            messages.push(Message {
-                role: "user".to_string(),
-                content: user_prompt.to_string(),
-            });
-        }
-
-        // Convert message from a vector into a slice.
-        let messages: [messages] = messages.as_slice();
-
-        // Format the messages into a single prompt string
-        let prompt = format_messages(&messages);
-
+        inference_params: InferenceParams,
+        app_handle: tauri::AppHandle,
+    ) -> Result<String, anyhow::Error> {
         // Encode the prompt
         let tokens = self
             .resources
             .tokenizer
-            .encode(prompt, true)
+            .encode(inference_params.prompt, true)
             .map_err(|e| anyhow::anyhow!("Encoding error: {}", e))?
             .get_ids()
             .to_vec();
@@ -231,11 +191,11 @@ impl LlamaModel {
             .map(LlamaEosToks::Single)
             .or_else(|| self.resources.config.eos_token_id.clone());
 
-        let temperature = params.temperature.unwrap_or(0.8);
+        let temperature = inference_params.temperature;
         let sampling = if temperature <= 0.0 {
             Sampling::ArgMax
         } else {
-            match (params.top_k, params.top_p) {
+            match (inference_params.top_k, inference_params.top_p) {
                 (Some(k), Some(p)) => Sampling::TopKThenTopP { k, p, temperature },
                 (Some(k), None) => Sampling::TopK { k, temperature },
                 (None, Some(p)) => Sampling::TopP { p, temperature },
@@ -243,8 +203,7 @@ impl LlamaModel {
             }
         };
 
-        let mut logits_processor =
-            LogitsProcessor::from_sampling(params.seed.unwrap_or(42), sampling);
+        let mut logits_processor = LogitsProcessor::from_sampling(inference_params.seed, sampling);
 
         let device = Device::cuda_if_available(0)?;
         let dtype = DType::F32;
@@ -255,7 +214,7 @@ impl LlamaModel {
         let mut tokens = tokens.clone();
         let mut token_generated = 0;
 
-        for _ in 0..params.max_tokens.unwrap_or(100) {
+        for _ in 0..inference_params.max_tokens {
             let (context_size, context_index) = if cache.use_kv_cache && token_generated > 0 {
                 (1, tokens.len())
             } else {
@@ -270,13 +229,11 @@ impl LlamaModel {
                 .forward(&input, context_index, &mut cache)?
                 .squeeze(0)?;
 
-            let logits = if params.repeat_penalty.unwrap_or(1.1) != 1.0 {
-                let start_at = tokens
-                    .len()
-                    .saturating_sub(params.repeat_last_n.unwrap_or(128));
+            let logits = if inference_params.repeat_penalty != 1.0 {
+                let start_at = tokens.len().saturating_sub(inference_params.repeat_last_n);
                 candle_transformers::utils::apply_repeat_penalty(
                     &logits,
-                    params.repeat_penalty.unwrap_or(1.1),
+                    inference_params.repeat_penalty,
                     &tokens[start_at..],
                 )?
             } else {
@@ -339,127 +296,6 @@ impl LlamaModel {
             .tokenizer
             .decode(&token_output, true)
             .map_err(|e| anyhow::anyhow!("Decoding error: {}", e))?;
-
-        // Save the generated text to the database along with the user prompt (user: user_prompt, assistant: generated_text)
-        let mut messages = vec![
-            Message {
-                role: "user".to_string(),
-                content: user_prompt.to_string(),
-            },
-            Message {
-                role: "assistant".to_string(),
-                content: generated_text.clone(),
-            },
-        ];
-
-        crate::database::insert_message_into_chat(
-            &connection,
-            crate::database::most_recent_chat(&connection),
-            &mut messages,
-        );
-
-        Ok(())
-    }
-
-    /// Internal method to handle the actual generation logic
-    async fn generate_response(&self, params: GenerationParams) -> Result<String> {
-        let prompt = if let Some(messages) = &params.messages {
-            format_messages(messages)
-        } else {
-            DEFAULT_PROMPT.to_string()
-        };
-
-        let tokens = self
-            .resources
-            .tokenizer
-            .encode(prompt, true)
-            .map_err(Error::msg)?
-            .get_ids()
-            .to_vec();
-
-        let eos_token_id = self
-            .resources
-            .tokenizer
-            .token_to_id(EOS_TOKEN)
-            .map(LlamaEosToks::Single)
-            .or_else(|| self.resources.config.eos_token_id.clone());
-
-        let temperature = params.temperature.unwrap_or(0.8);
-        let sampling = if temperature <= 0. {
-            Sampling::ArgMax
-        } else {
-            match (params.top_k, params.top_p) {
-                (None, None) => Sampling::All { temperature },
-                (Some(k), None) => Sampling::TopK { k, temperature },
-                (None, Some(p)) => Sampling::TopP { p, temperature },
-                (Some(k), Some(p)) => Sampling::TopKThenTopP { k, p, temperature },
-            }
-        };
-
-        let mut logits_processor =
-            LogitsProcessor::from_sampling(params.seed.unwrap_or(42), sampling);
-
-        let device = Device::cuda_if_available(0)?;
-        let dtype = DType::F32;
-        let mut cache = Cache::new(true, dtype, &self.resources.config, &device)?;
-
-        let start_gen = std::time::Instant::now();
-        let sample_len = params.max_tokens.unwrap_or(100);
-        let repeat_penalty = params.repeat_penalty.unwrap_or(1.1);
-        let repeat_last_n = params.repeat_last_n.unwrap_or(128);
-        let mut token_output = Vec::new();
-        let mut tokens = tokens.clone();
-        let mut token_generated = 0;
-
-        for _ in 0..sample_len {
-            let (context_size, context_index) = if cache.use_kv_cache && token_generated > 0 {
-                (1, tokens.len())
-            } else {
-                (tokens.len(), 0)
-            };
-
-            let ctxt = &tokens[tokens.len().saturating_sub(context_size)..];
-            let input = Tensor::new(ctxt, &device)?.unsqueeze(0)?;
-            let logits = self
-                .resources
-                .llama
-                .forward(&input, context_index, &mut cache)?
-                .squeeze(0)?;
-
-            let logits = if repeat_penalty != 1.0 {
-                let start_at = tokens.len().saturating_sub(repeat_last_n);
-                candle_transformers::utils::apply_repeat_penalty(
-                    &logits,
-                    repeat_penalty,
-                    &tokens[start_at..],
-                )?
-            } else {
-                logits
-            };
-
-            let next_token = logits_processor.sample(&logits)?;
-            token_generated += 1;
-            tokens.push(next_token);
-            token_output.push(next_token);
-
-            if let Some(LlamaEosToks::Single(eos_tok_id)) = eos_token_id {
-                if next_token == eos_tok_id {
-                    break;
-                }
-            }
-        }
-
-        let generated_text = self
-            .resources
-            .tokenizer
-            .decode(&token_output, true)
-            .map_err(Error::msg)?;
-        let generation_time = start_gen.elapsed().as_secs_f64();
-
-        println!(
-            "Generated {} tokens in {:.2}",
-            token_generated, generation_time
-        );
 
         Ok(generated_text)
     }
