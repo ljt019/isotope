@@ -43,6 +43,7 @@ impl InferenceParamsManager {
         inference_params
     }
 
+    /// Set the model to use for inference
     pub fn set_model(&mut self, model: crate::models::llama::llama_options::LlamaOptions) {
         let model_name = model.get_model_name();
         self.store
