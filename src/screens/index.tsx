@@ -189,6 +189,7 @@ function SelectModel() {
 
   async function setOption(modelName: string) {
     try {
+      console.log("Setting model:", modelName);
       await invoke("set_model", { modelSelection: modelName });
       await refetchSelectedModel();
     } catch (error) {

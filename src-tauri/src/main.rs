@@ -6,7 +6,10 @@ mod models;
 mod utils;
 
 use crate::database::pool::create_pool;
-use log::{debug, error};
+use env_logger::{Builder, WriteStyle};
+use log::{debug, error, info, trace};
+use log::{Level, LevelFilter, Log, MetadataBuilder, Record};
+use std::io::Write;
 use tauri::Manager;
 use tokio::sync::Mutex;
 use window_shadows::set_shadow;
@@ -37,13 +40,15 @@ async fn set_model(
     state: tauri::State<'_, Mutex<models::model_manager::ModelManager>>,
     model_selection: String,
 ) -> Result<(), String> {
-    debug!("Acquiring model manager lock for model selection");
+    trace!("Acquiring model manager lock for model selection");
     let mut model_manager = state.lock().await;
-    debug!("Lock acquired successfully");
+    trace!("Lock acquired successfully");
 
     let model =
         models::llama::llama_options::LlamaOptions::from_model_name(model_selection.as_str())
             .expect("Invalid model selection");
+
+    debug!("Setting model to: {}", model.get_model_name());
 
     model_manager.set_model(model).await;
     Ok(())
@@ -85,12 +90,25 @@ async fn get_current_chat(
 
 fn main() {
     dotenv::dotenv().ok();
-    env_logger::init();
+
+    env_logger::Builder::new()
+        .filter_level(LevelFilter::Debug)
+        .write_style(WriteStyle::Always)
+        .format(|buf, record| {
+            writeln!(
+                buf,
+                "{} [{}] - {}",
+                buf.timestamp(),
+                record.level(),
+                record.args()
+            )
+        })
+        .init();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::default().build())
         .setup(|app| {
-            debug!("Initializing application");
+            trace!("Initializing application");
 
             // Create async runtime for setup
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
@@ -110,20 +128,21 @@ fn main() {
                     models::model_manager::ModelManager::new(app.app_handle(), pool).await
                 })
                 .expect("Failed to create ModelManager");
-            debug!("ModelManager created");
+            trace!("ModelManager created");
 
             // Now manage the resolved ModelManager
             app.manage(Mutex::new(model_manager));
-            debug!("ModelManager state managed");
+            trace!("ModelManager state managed");
 
             // Setup window
             let window = app
                 .get_window("main")
                 .ok_or_else(|| "Failed to get main window")?;
             set_shadow(&window, true).map_err(|e| format!("Failed to set window shadow: {}", e))?;
+            trace!("Window Setup");
 
             load_main_app(&window);
-            debug!("Window setup completed");
+            info!("Application initialized");
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

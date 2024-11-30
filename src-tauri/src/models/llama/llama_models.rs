@@ -8,12 +8,12 @@ use candle_transformers::models::llama::{Cache, Llama, LlamaConfig, LlamaEosToks
 use hf_hub::{api::sync::ApiBuilder, Repo, RepoType};
 use std::sync::Arc;
 use tauri::Manager;
+use tauri::Runtime;
 use tokenizers::Tokenizer;
 
 /// Constants used in the model
 const EOS_TOKEN: &str = "<|eot_id|>";
 const BOS_TOKEN: &str = "<|begin_of_text|>";
-const DEFAULT_PROMPT: &str = "My favorite theorem is";
 const SYSTEM_PROMPT: &str = "You are a helpful coding assistant. Always strive to provide complete answers without abrupt endings.";
 const DEFAULT_MODEL: &str = "meta-llama/Llama-3.2-1B-Instruct";
 
@@ -113,7 +113,11 @@ pub struct LlamaModel {
 }
 
 impl LlamaModel {
-    pub async fn inference(&self, params: InferenceParams, app_handle: tauri::AppHandle) -> String {
+    pub async fn inference<R: Runtime>(
+        &self,
+        params: InferenceParams,
+        app_handle: tauri::AppHandle<R>,
+    ) -> String {
         match self.chat(params, app_handle).await {
             Ok(response) => response,
             Err(e) => {
@@ -170,10 +174,10 @@ impl LlamaModel {
         })
     }
 
-    pub async fn chat(
+    pub async fn chat<R: Runtime>(
         &self,
         inference_params: InferenceParams,
-        app_handle: tauri::AppHandle,
+        app_handle: tauri::AppHandle<R>,
     ) -> Result<String, anyhow::Error> {
         // Encode the prompt
         let tokens = self

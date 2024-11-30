@@ -3,6 +3,7 @@ use crate::database::Chat;
 use crate::models::chat_manager::ChatManager;
 use crate::models::inference_params_manager::InferenceParamsManager;
 use crate::models::llama::llama_models::LlamaModel as Model;
+use log::info;
 
 use super::llama::llama_options::LlamaOptions;
 
@@ -39,13 +40,22 @@ impl ModelManager {
             .await
             .expect("Failed to load model");
 
+        let name = model.get_model_name().to_string();
+
         self.inference_params_manager.set_model(model);
+
+        info!("Model set to: {}", name);
     }
 
     pub async fn get_current_model(&self) -> String {
-        self.inference_params_manager
+        let current_model_value = self
+            .inference_params_manager
             .get_current_model_value()
-            .expect("Failed to get current model")
+            .expect("Failed to get current model");
+
+        info!("Current model: {}", current_model_value);
+
+        current_model_value
     }
 
     pub async fn get_current_chat(&self) -> &Chat {
