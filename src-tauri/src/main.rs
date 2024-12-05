@@ -1,5 +1,5 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+//#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod database;
 mod models;
@@ -11,6 +11,7 @@ use log::{debug, error, info, trace};
 use log::{Level, LevelFilter, Log, MetadataBuilder, Record};
 use std::io::Write;
 use tauri::Manager;
+use tauri_plugin_log::LogTarget;
 use tokio::sync::Mutex;
 use window_shadows::set_shadow;
 
@@ -91,24 +92,16 @@ async fn get_current_chat(
 fn main() {
     dotenv::dotenv().ok();
 
-    env_logger::Builder::new()
-        .filter_level(LevelFilter::Debug)
-        .write_style(WriteStyle::Always)
-        .format(|buf, record| {
-            writeln!(
-                buf,
-                "{} [{}] - {}",
-                buf.timestamp(),
-                record.level(),
-                record.args()
-            )
-        })
-        .init();
-
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::default().build())
+        .plugin(
+            tauri_plugin_log::Builder::default()
+                .targets([LogTarget::Stdout])
+                .level(log::LevelFilter::Debug)
+                .build(),
+        )
         .setup(|app| {
-            trace!("Initializing application");
+            debug!("Initializing application");
 
             // Create async runtime for setup
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");

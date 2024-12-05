@@ -98,12 +98,12 @@ export function Index() {
                 alt="ollama"
                 className="h-8 w-8 mr-2 [filter:brightness(0)_invert(1)]"
               />
-              <div>
+              <div className="flex space-x-4 z-[1]">
                 <SelectedModelTitle />
+                <SelectModel />
               </div>
             </div>
           </CardTitle>
-          <SelectModel />
         </CardHeader>
         <Separator />
         <CardContent className="flex-grow overflow-hidden p-6">

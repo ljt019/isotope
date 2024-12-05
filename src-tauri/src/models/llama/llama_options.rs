@@ -1,3 +1,4 @@
+use log::debug;
 use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 
@@ -24,6 +25,8 @@ impl LlamaOptions {
     }
 
     pub fn from_model_option_string(name: &str) -> Option<Self> {
+        debug!("from model option string: {}", name);
+
         match name {
             "V32_3BInstruct" => Some(Self::V32_3BInstruct),
             "V32_1BInstruct" => Some(Self::V32_1BInstruct),

@@ -10,13 +10,13 @@ export default function TitleBar() {
   return (
     <div
       data-tauri-drag-region
-      className="h-8 bg-background flex justify-end items-center fixed top-0 left-0 right-0 z-0"
+      className="h-8 bg-background flex justify-end items-center fixed top-0 left-0 right-0 z-[0]"
     >
       <Button
         variant="ghost"
         size="icon"
         onClick={handleMinimize}
-        className="h-[1.5rem] w-8 text-muted-foreground hover:text-foreground hover:bg-zinc-700 rounded-md"
+        className="h-[1.5rem] w-8 text-muted-foreground hover:text-foreground hover:bg-zinc-700 rounded-md z-[0]"
         aria-label="Minimize"
       >
         <Minus className="h-4 w-4" />
@@ -25,7 +25,7 @@ export default function TitleBar() {
         variant="ghost"
         size="icon"
         onClick={handleMaximize}
-        className="h-[1.5rem] w-8 text-muted-foreground hover:text-foreground hover:bg-zinc-700 rounded-md"
+        className="h-[1.5rem] w-8 text-muted-foreground hover:text-foreground hover:bg-zinc-700 rounded-md z-[0]"
         aria-label="Maximize"
       >
         <Maximize className="h-4 w-4" />
@@ -34,7 +34,7 @@ export default function TitleBar() {
         variant="ghost"
         size="icon"
         onClick={handleClose}
-        className="h-[1.5rem] w-8 hover:bg-accent text-muted-foreground hover:text-destructive hover:bg-zinc-700 rounded-md mr-1"
+        className="h-[1.5rem] w-8 hover:bg-accent text-muted-foreground hover:text-destructive hover:bg-zinc-700 rounded-md mr-1 z-[0]"
         aria-label="Close"
       >
         <X className="h-4 w-4" />

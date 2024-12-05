@@ -19,7 +19,7 @@ pub struct InferenceParams {
 impl Default for InferenceParams {
     fn default() -> Self {
         InferenceParams {
-            model: "V32_3BInstruct".to_string(),
+            model: "meta-llama/Llama-3.2-1B-Instruct".to_string(),
             prompt: "".to_string(),
             temperature: 0.2,
             top_p: Some(0.9),

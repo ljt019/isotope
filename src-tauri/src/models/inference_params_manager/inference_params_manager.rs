@@ -29,10 +29,9 @@ impl InferenceParamsManager {
         let selected_model = params.model;
         debug!("Selected model: {:?}", selected_model);
 
-        let model_option =
-            crate::models::llama::llama_options::LlamaOptions::from_model_option_string(
-                selected_model.as_str(),
-            );
+        let model_option = crate::models::llama::llama_options::LlamaOptions::from_model_name(
+            selected_model.as_str(),
+        );
 
         model_option.map(|m| m.get_model_name())
     }
@@ -88,7 +87,7 @@ fn create_store(app_handle: tauri::AppHandle<Wry>) -> Store<Wry> {
 }
 
 fn initialize_store(store: &mut Store<Wry>) -> Result<(), Box<dyn std::error::Error>> {
-    let default_model = crate::models::llama::llama_options::LlamaOptions::default_model();
+    let default_model = "meta-llama/Llama-3.2-1B-Instruct";
 
     store.insert(
         "selected_model".to_string(),
