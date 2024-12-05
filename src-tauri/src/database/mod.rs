@@ -22,6 +22,7 @@ pub fn setup_database(pool: &DbPool) {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct Chat {
     pub id: i64,
@@ -99,6 +100,7 @@ pub fn get_chat(pool: &DbPool, id: i64) -> rusqlite::Result<Chat> {
     })
 }
 
+#[allow(dead_code)]
 pub fn get_chat_messages(
     pool: &DbPool,
     id: i64,

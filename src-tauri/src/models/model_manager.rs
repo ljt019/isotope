@@ -85,7 +85,11 @@ impl ModelManager {
         // Generate response
         let response = crate::models::chat_manager::Message {
             role: "assistant".to_string(),
-            content: self.model.inference(inference_params, app_handle).await,
+            content: self
+                .model
+                .inference(inference_params, app_handle)
+                .await
+                .expect("Failed to generate response"),
         };
 
         // Save response

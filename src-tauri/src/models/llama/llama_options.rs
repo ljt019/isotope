@@ -1,4 +1,3 @@
-use log::debug;
 use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 
@@ -24,20 +23,6 @@ impl LlamaOptions {
         }
     }
 
-    pub fn from_model_option_string(name: &str) -> Option<Self> {
-        debug!("from model option string: {}", name);
-
-        match name {
-            "V32_3BInstruct" => Some(Self::V32_3BInstruct),
-            "V32_1BInstruct" => Some(Self::V32_1BInstruct),
-            "SmolLM2_135MInstruct" => Some(Self::SmolLM2_135MInstruct),
-            "SmolLM2_360MInstruct" => Some(Self::SmolLM2_360MInstruct),
-            "SmolLM2_1BInstruct" => Some(Self::SmolLM2_1BInstruct),
-            "TinyLlama1_1BChat" => Some(Self::TinyLlama1_1BChat),
-            _ => None,
-        }
-    }
-
     pub fn from_model_name(name: &str) -> Option<Self> {
         match name {
             "meta-llama/Llama-3.2-3B-Instruct" => Some(Self::V32_3BInstruct),
@@ -53,9 +38,5 @@ impl LlamaOptions {
     // Returns a Vec of all model names
     pub fn all_model_names() -> Vec<String> {
         Self::iter().map(|model| model.get_model_name()).collect()
-    }
-
-    pub fn default_model() -> Self {
-        Self::V32_3BInstruct
     }
 }

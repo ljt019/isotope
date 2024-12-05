@@ -6,6 +6,7 @@ use candle_nn::VarBuilder;
 use candle_transformers::generation::{LogitsProcessor, Sampling};
 use candle_transformers::models::llama::{Cache, Llama, LlamaConfig, LlamaEosToks};
 use hf_hub::{api::sync::ApiBuilder, Repo, RepoType};
+use log::debug;
 use std::sync::Arc;
 use tauri::Manager;
 use tauri::Runtime;
@@ -14,7 +15,6 @@ use tokenizers::Tokenizer;
 /// Constants used in the model
 const EOS_TOKEN: &str = "<|eot_id|>";
 const BOS_TOKEN: &str = "<|begin_of_text|>";
-const SYSTEM_PROMPT: &str = "You are a helpful coding assistant. Always strive to provide complete answers without abrupt endings.";
 const DEFAULT_MODEL: &str = "meta-llama/Llama-3.2-1B-Instruct";
 
 /// Holds the resources required by the model
@@ -74,60 +74,27 @@ impl LlamaModelResources {
     }
 }
 
-/// Formats messages into a single prompt string.
-pub fn format_messages(messages: &[Message]) -> String {
-    let mut formatted_messages = Vec::new();
-
-    for msg in messages {
-        match msg.role.as_str() {
-            "system" => {
-                // Include system messages without special tokens
-                formatted_messages.push(format!("System:\n{}", msg.content));
-            }
-            "user" => {
-                // Wrap user messages with BOS_TOKEN and EOS_TOKEN
-                formatted_messages.push(format!("{}{}{}", BOS_TOKEN, msg.content, EOS_TOKEN));
-            }
-            "assistant" => {
-                // Include assistant messages without special tokens
-                formatted_messages.push(format!("Assistant:\n{}", msg.content));
-            }
-            _ => {
-                // Handle any other roles generically
-                formatted_messages.push(format!("{}:\n{}", msg.role, msg.content));
-            }
-        }
-    }
-
-    // Append "Assistant:" to signal the model to generate a response
-    formatted_messages.push("Assistant:".to_string());
-
-    formatted_messages.join("\n\n") // Clear separation between messages
-}
-
 /// The main Model struct encapsulating the Llama model and tokenizer
 pub struct LlamaModel {
     model_id: String,
     resources: Arc<LlamaModelResources>,
-    system_prompt: String,
 }
 
 impl LlamaModel {
-    pub async fn inference<R: Runtime>(
-        &self,
-        params: InferenceParams,
-        app_handle: tauri::AppHandle<R>,
-    ) -> String {
-        match self.chat(params, app_handle).await {
-            Ok(response) => response,
-            Err(e) => {
-                eprintln!("Error generating response: {}", e);
-                "Error generating response".to_string()
-            }
-        }
+    /// Initializes the Model by loading the specified model.
+    /// It handles downloading and caching as necessary.
+    pub async fn new(model_id: Option<&str>) -> Result<Self> {
+        let model_id = model_id.unwrap_or(DEFAULT_MODEL);
+        debug!("Loading model: {}", model_id);
+        let resources: LlamaModelResources = LlamaModelResources::load(model_id).await?;
+        debug!("Model loaded: {}", model_id);
+        Ok(Self {
+            model_id: model_id.to_string(),
+            resources: Arc::new(resources),
+        })
     }
 
-    //
+    /// formats the prompt in the required format for the model
     pub fn format_prompt(&self, messages: Vec<Message>) -> String {
         let mut formatted_messages = Vec::new();
 
@@ -158,23 +125,9 @@ impl LlamaModel {
 
         formatted_messages.join("\n\n") // Clear separation between messages
     }
-}
 
-impl LlamaModel {
-    /// Initializes the Model by loading the specified model.
-    /// It handles downloading and caching as necessary.
-    pub async fn new(model_id: Option<&str>) -> Result<Self> {
-        let model_id = model_id.unwrap_or(DEFAULT_MODEL);
-        println!("Loading model: {}", model_id);
-        let resources = LlamaModelResources::load(model_id).await?;
-        Ok(Self {
-            model_id: model_id.to_string(),
-            resources: Arc::new(resources),
-            system_prompt: SYSTEM_PROMPT.to_string(),
-        })
-    }
-
-    pub async fn chat<R: Runtime>(
+    /// Generates a response to the given prompt
+    pub async fn inference<R: Runtime>(
         &self,
         inference_params: InferenceParams,
         app_handle: tauri::AppHandle<R>,
@@ -304,3 +257,5 @@ impl LlamaModel {
         Ok(generated_text)
     }
 }
+
+impl LlamaModel {}

@@ -55,6 +55,7 @@ impl InferenceParamsManager {
         self.inference_params.model = model_name;
     }
 
+    #[allow(dead_code)]
     pub fn set_inference_params(&mut self, params: InferenceParams) {
         self.store
             .insert(
@@ -74,7 +75,6 @@ fn create_store(app_handle: tauri::AppHandle<Wry>) -> Store<Wry> {
 
     std::fs::create_dir_all(&data_dir).expect("Failed to create data directory");
     let store_path = data_dir.join("isotope_store.bin");
-    debug!("Store path: {:?}", store_path);
 
     let mut store = StoreBuilder::new(app_handle, store_path).build();
 
@@ -125,10 +125,6 @@ mod tests {
     impl MockStore {
         fn insert(&self, key: String, value: JsonValue) {
             self.data.lock().unwrap().insert(key, value);
-        }
-
-        fn get(&self, key: &str) -> Option<JsonValue> {
-            self.data.lock().unwrap().get(key).cloned()
         }
     }
 

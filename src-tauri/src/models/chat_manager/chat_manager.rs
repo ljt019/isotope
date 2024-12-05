@@ -1,6 +1,8 @@
 use super::Message;
 use crate::database::{pool::DbPool, Chat};
 
+const SYTEM_PROMPT: &str = "You are a helpful coding assistant. Always strive to provide complete answers without abrupt endings.";
+
 pub struct ChatManager {
     current_chat: Chat,
     database: DbPool,
@@ -18,6 +20,14 @@ impl ChatManager {
                 // Generate random chat name and create new chat
                 let new_chat_name = format!("Chat {}", rand::random::<u32>());
                 let new_chat_id = crate::database::insert_chat(&pool, new_chat_name)?;
+
+                let system_prompt = Message {
+                    role: "system".to_string(),
+                    content: SYTEM_PROMPT.to_string(),
+                };
+
+                crate::database::insert_message_into_chat(&pool, new_chat_id, &system_prompt)?;
+
                 crate::database::get_chat(&pool, new_chat_id)?
             }
         };
@@ -32,18 +42,29 @@ impl ChatManager {
         &self.current_chat
     }
 
+    #[allow(dead_code)]
     pub fn new_chat(&mut self) -> rusqlite::Result<()> {
         let new_chat_name = format!("Chat {}", rand::random::<u32>());
         let new_chat_id = crate::database::insert_chat(&self.database, new_chat_name)?;
+
+        let system_prompt = Message {
+            role: "system".to_string(),
+            content: SYTEM_PROMPT.to_string(),
+        };
+
+        crate::database::insert_message_into_chat(&self.database, new_chat_id, &system_prompt)?;
+
         self.current_chat = crate::database::get_chat(&self.database, new_chat_id)?;
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn switch_chat(&mut self, chat_id: i64) -> rusqlite::Result<()> {
         self.current_chat = crate::database::get_chat(&self.database, chat_id)?;
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn get_all_chats(&self) -> rusqlite::Result<Vec<Chat>> {
         crate::database::get_all_chats(&self.database)
     }

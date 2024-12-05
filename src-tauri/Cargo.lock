@@ -4276,6 +4276,7 @@ dependencies = [
  "candle-nn",
  "candle-transformers",
  "chrono",
+ "colored",
  "dotenv",
  "env_logger",
  "futures",

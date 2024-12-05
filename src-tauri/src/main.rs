@@ -6,10 +6,10 @@ mod models;
 mod utils;
 
 use crate::database::pool::create_pool;
-use env_logger::{Builder, WriteStyle};
-use log::{debug, error, info, trace};
-use log::{Level, LevelFilter, Log, MetadataBuilder, Record};
-use std::io::Write;
+use chrono::Local;
+use colored::*;
+use log::Level;
+use log::{debug, error, info};
 use tauri::Manager;
 use tauri_plugin_log::LogTarget;
 use tokio::sync::Mutex;
@@ -21,9 +21,7 @@ async fn chat(
     app_handle: tauri::AppHandle,
     state: tauri::State<'_, Mutex<models::model_manager::ModelManager>>,
 ) -> Result<String, String> {
-    debug!("Acquiring model manager lock for chat");
     let mut model_manager = state.lock().await;
-    debug!("Lock acquired successfully");
 
     let response = model_manager
         .chat(prompt, app_handle.clone())
@@ -41,9 +39,7 @@ async fn set_model(
     state: tauri::State<'_, Mutex<models::model_manager::ModelManager>>,
     model_selection: String,
 ) -> Result<(), String> {
-    trace!("Acquiring model manager lock for model selection");
     let mut model_manager = state.lock().await;
-    trace!("Lock acquired successfully");
 
     let model =
         models::llama::llama_options::LlamaOptions::from_model_name(model_selection.as_str())
@@ -66,9 +62,7 @@ fn get_model_options() -> Result<Vec<String>, String> {
 async fn get_selected_model(
     state: tauri::State<'_, Mutex<models::model_manager::ModelManager>>,
 ) -> Result<String, String> {
-    debug!("Acquiring model manager lock to get selected model");
     let model_manager = state.lock().await;
-    debug!("Lock acquired successfully");
 
     let selected_model = model_manager.get_current_model().await;
     Ok(selected_model)
@@ -78,9 +72,7 @@ async fn get_selected_model(
 async fn get_current_chat(
     state: tauri::State<'_, Mutex<models::model_manager::ModelManager>>,
 ) -> Result<Vec<models::chat_manager::Message>, String> {
-    debug!("Acquiring model manager lock to get chat history");
     let model_manager = state.lock().await;
-    debug!("Lock acquired successfully");
 
     let current_chat = model_manager.get_current_chat().await;
 
@@ -98,6 +90,22 @@ fn main() {
             tauri_plugin_log::Builder::default()
                 .targets([LogTarget::Stdout])
                 .level(log::LevelFilter::Debug)
+                .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
+                .format(|callback, args, record| {
+                    let timestamp = Local::now()
+                        .format("%Y-%m-%d %H:%M:%S%.3f")
+                        .to_string()
+                        .dimmed();
+                    let level = colorize_level(record.level());
+                    let target = record.target().cyan();
+                    let message = args.to_string();
+
+                    let formatted_message =
+                        format!("{} {} [{}] {}", timestamp, level, target, message);
+
+                    callback.finish(format_args!("{}", formatted_message))
+                })
+                .filter(blacklist_filter)
                 .build(),
         )
         .setup(|app| {
@@ -121,18 +129,15 @@ fn main() {
                     models::model_manager::ModelManager::new(app.app_handle(), pool).await
                 })
                 .expect("Failed to create ModelManager");
-            trace!("ModelManager created");
 
             // Now manage the resolved ModelManager
             app.manage(Mutex::new(model_manager));
-            trace!("ModelManager state managed");
 
             // Setup window
             let window = app
                 .get_window("main")
                 .ok_or_else(|| "Failed to get main window")?;
             set_shadow(&window, true).map_err(|e| format!("Failed to set window shadow: {}", e))?;
-            trace!("Window Setup");
 
             load_main_app(&window);
             info!("Application initialized");
@@ -153,4 +158,30 @@ fn load_main_app(window: &tauri::Window) {
     window
         .eval("window.location.replace('index.html');")
         .expect("Failed to load main application");
+}
+
+// Define a blacklist filter function
+fn blacklist_filter(metadata: &log::Metadata) -> bool {
+    let blacklist_modules = ["hf_hub"];
+
+    // Exclude messages from blacklisted modules
+    if blacklist_modules
+        .iter()
+        .any(|module| metadata.target().starts_with(module))
+    {
+        false
+    } else {
+        true
+    }
+}
+
+/// Maps log levels to their corresponding colored strings.
+fn colorize_level(level: Level) -> colored::ColoredString {
+    match level {
+        Level::Error => "ERROR".red().bold(),
+        Level::Warn => "WARN".yellow().bold(),
+        Level::Info => "INFO".green().bold(),
+        Level::Debug => "DEBUG".magenta().bold(),
+        Level::Trace => "TRACE".blue().bold(),
+    }
 }
