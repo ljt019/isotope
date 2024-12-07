@@ -22,6 +22,7 @@ pub fn setup_database(pool: &DbPool) {
     }
 }
 
+// keep for now
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct Chat {

@@ -1,7 +1,7 @@
 use super::Message;
 use crate::database::{pool::DbPool, Chat};
 
-const SYTEM_PROMPT: &str = "You are a helpful coding assistant. Always strive to provide complete answers without abrupt endings.";
+const SYSTEM_PROMPT: &str = "You are a helpful coding assistant. Always strive to provide complete answers without abrupt endings.";
 
 pub struct ChatManager {
     current_chat: Chat,
@@ -19,16 +19,7 @@ impl ChatManager {
             None => {
                 // Generate random chat name and create new chat
                 let new_chat_name = format!("Chat {}", rand::random::<u32>());
-                let new_chat_id = crate::database::insert_chat(&pool, new_chat_name)?;
-
-                let system_prompt = Message {
-                    role: "system".to_string(),
-                    content: SYTEM_PROMPT.to_string(),
-                };
-
-                crate::database::insert_message_into_chat(&pool, new_chat_id, &system_prompt)?;
-
-                crate::database::get_chat(&pool, new_chat_id)?
+                create_new_chat(&pool, new_chat_name)?
             }
         };
 
@@ -42,28 +33,22 @@ impl ChatManager {
         &self.current_chat
     }
 
+    /// Will be used when the ui is implemented to switch between chats, will be used to start a new chat manually by the user
     #[allow(dead_code)]
     pub fn new_chat(&mut self) -> rusqlite::Result<()> {
         let new_chat_name = format!("Chat {}", rand::random::<u32>());
-        let new_chat_id = crate::database::insert_chat(&self.database, new_chat_name)?;
-
-        let system_prompt = Message {
-            role: "system".to_string(),
-            content: SYTEM_PROMPT.to_string(),
-        };
-
-        crate::database::insert_message_into_chat(&self.database, new_chat_id, &system_prompt)?;
-
-        self.current_chat = crate::database::get_chat(&self.database, new_chat_id)?;
+        self.current_chat = create_new_chat(&self.database, new_chat_name)?;
         Ok(())
     }
 
+    /// Will allow user to switch between the chat they want to view/interact with
     #[allow(dead_code)]
     pub fn switch_chat(&mut self, chat_id: i64) -> rusqlite::Result<()> {
         self.current_chat = crate::database::get_chat(&self.database, chat_id)?;
         Ok(())
     }
 
+    /// Will be used to get all chats that have been created to display in the ui as a list for the user to select
     #[allow(dead_code)]
     pub fn get_all_chats(&self) -> rusqlite::Result<Vec<Chat>> {
         crate::database::get_all_chats(&self.database)
@@ -80,4 +65,14 @@ impl ChatManager {
         self.current_chat.messages.push(response);
         Ok(())
     }
+}
+
+fn create_new_chat(pool: &DbPool, name: String) -> rusqlite::Result<Chat> {
+    let new_chat_id = crate::database::insert_chat(pool, name)?;
+    let system_prompt = Message {
+        role: "system".to_string(),
+        content: SYSTEM_PROMPT.to_string(),
+    };
+    crate::database::insert_message_into_chat(pool, new_chat_id, &system_prompt)?;
+    crate::database::get_chat(pool, new_chat_id)
 }
