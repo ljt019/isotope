@@ -4,6 +4,7 @@ import {
   Route,
 } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import Sidebar from "@/components/sidebar/sidebar";
 
 import TitleBar from "@/components/titlebar";
 
@@ -11,7 +12,7 @@ import { Index } from "./screens/index";
 
 type Route = {
   path: string;
-  element: JSX.Element;
+  element: React.ReactNode;
 };
 
 const routes: Route[] = [
@@ -35,12 +36,12 @@ function Routes({ routes }: { routes: Route[] }) {
   );
 }
 
-function Layout({ children }: { children: JSX.Element }) {
+function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <Sidebar>
       <TitleBar />
-      <div className="overflow-hidden h-screen">{children}</div>
-    </>
+      {children}
+    </Sidebar>
   );
 }
 

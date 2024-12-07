@@ -62,6 +62,12 @@ impl ModelManager {
         self.chat_manager.get_current_chat()
     }
 
+    pub async fn get_chat_history(&self) -> Vec<Chat> {
+        self.chat_manager
+            .get_all_chats()
+            .expect("Failed to get chat history")
+    }
+
     /// Chat with the model, with the given prompt
     pub async fn chat(
         &mut self,

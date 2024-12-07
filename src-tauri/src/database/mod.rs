@@ -23,8 +23,7 @@ pub fn setup_database(pool: &DbPool) {
 }
 
 // keep for now
-#[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Chat {
     pub id: i64,
     pub name: String,

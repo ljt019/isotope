@@ -48,8 +48,7 @@ impl ChatManager {
         Ok(())
     }
 
-    /// Will be used to get all chats that have been created to display in the ui as a list for the user to select
-    #[allow(dead_code)]
+    /// Used to get all chats that have been created to display in the ui as a list for the user to select
     pub fn get_all_chats(&self) -> rusqlite::Result<Vec<Chat>> {
         crate::database::get_all_chats(&self.database)
     }

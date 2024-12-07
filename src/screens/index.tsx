@@ -88,24 +88,8 @@ export function Index() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground pb-3">
+    <div className="flex flex-col h-screen bg-background text-foreground container">
       <Card className="flex flex-col h-full rounded-none border-0 ">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 ">
-          <CardTitle className="text-2xl font-bold ">
-            <div className="flex">
-              <img
-                src="/ollama.svg"
-                alt="ollama"
-                className="h-8 w-8 mr-2 [filter:brightness(0)_invert(1)]"
-              />
-              <div className="flex space-x-4 z-[1]">
-                <SelectedModelTitle />
-                <SelectModel />
-              </div>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <Separator />
         <CardContent className="flex-grow overflow-hidden p-6">
           <div className="grid grid-rows-[1fr,auto] gap-6 h-full">
             <ScrollArea className="pr-4" ref={responseRef}>
@@ -142,7 +126,7 @@ export function Index() {
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Enter your prompt here..."
-                className="min-h-[100px] resize-none"
+                className="min-h-[100px] resize-none "
               />
               <div className="flex justify-between items-center">
                 <p className="text-sm text-muted-foreground">
@@ -167,67 +151,6 @@ export function Index() {
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-function SelectedModelTitle() {
-  const { data: selected_model, isLoading, isError } = useGetSelectedModel();
-
-  if (isLoading) return <div>Loading...</div>;
-
-  if (isError) return <div>Error getting model options</div>;
-
-  if (!selected_model) return null;
-
-  return <div>{selected_model}</div>;
-}
-
-function SelectModel() {
-  const { data: modelOptions, isLoading, isError } = useGetModelOptions();
-  const { data: selectedModel, refetch: refetchSelectedModel } =
-    useGetSelectedModel();
-
-  async function setOption(modelName: string) {
-    try {
-      console.log("Setting model:", modelName);
-      await invoke("set_model", { modelSelection: modelName });
-      await refetchSelectedModel();
-    } catch (error) {
-      console.error("Error setting model:", error);
-    }
-  }
-
-  if (isLoading)
-    return <div className="text-sm text-muted-foreground">Loading...</div>;
-
-  if (isError)
-    return (
-      <div className="text-sm text-destructive">
-        Error getting model options
-      </div>
-    );
-
-  if (!modelOptions) return null;
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <ChevronDown className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent>
-        {modelOptions.map((model) => (
-          <DropdownMenuItem
-            key={model}
-            onSelect={() => setOption(model)}
-            className={selectedModel === model ? "bg-accent" : ""}
-          >
-            {model}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }
 
