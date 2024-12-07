@@ -42,8 +42,7 @@ async fn set_model(
     let mut model_manager = state.lock().await;
 
     let model =
-        models::llama::llama_options::LlamaOptions::from_model_name(model_selection.as_str())
-            .expect("Invalid model selection");
+        models::llama::llama_options::LlamaOptions::from_pretty_name(model_selection.as_str());
 
     debug!("Setting model to: {}", model.get_model_name());
 
@@ -56,38 +55,12 @@ fn get_model_options() -> Result<Vec<String>, String> {
     debug!("Fetching available model options");
     let mut llama_options = crate::models::llama::llama_options::LlamaOptions::all_model_names();
 
-    // Remove the prefix part from the model names (i.e meta-llama/, HuggingFaceTB/)
-    llama_options = llama_options
-        .iter()
-        .map(|option| {
-            let parts = option.split("/").collect::<Vec<&str>>();
-            parts[1].to_string()
-        })
-        .collect();
-
-    // Remove the -Instruct suffix from the model names if they exist
-    llama_options = llama_options
-        .iter()
-        .map(|option| {
-            if option.ends_with("-Instruct") {
-                option.split("-Instruct").collect::<Vec<&str>>()[0].to_string()
-            } else {
-                option.to_string()
-            }
-        })
-        .collect();
-
-    // If the model is tiny llama it has a weird suffix, -Chat-v1.0
-    llama_options = llama_options
-        .iter()
-        .map(|option| {
-            if option.ends_with("-Chat-v1.0") {
-                option.split("-Chat-v1.0").collect::<Vec<&str>>()[0].to_string()
-            } else {
-                option.to_string()
-            }
-        })
-        .collect();
+    for option in llama_options.iter_mut() {
+        // Convert model name to pretty name, dereference mutable reference so that we can modify the value
+        *option = crate::models::llama::llama_options::LlamaOptions::from_model_name_to_pretty_name(
+            option.as_str(),
+        );
+    }
 
     Ok(llama_options)
 }
@@ -99,17 +72,10 @@ async fn get_selected_model(
     let model_manager = state.lock().await;
 
     let mut selected_model = model_manager.get_current_model().await;
-    selected_model = selected_model.split("/").collect::<Vec<&str>>()[1].to_string();
 
-    // Remove the -Instruct suffix from the model name if it exists
-    if selected_model.ends_with("-Instruct") {
-        selected_model = selected_model.split("-Instruct").collect::<Vec<&str>>()[0].to_string();
-    }
-
-    // If the model is tiny llama it has a weird suffix, -Chat-v1.0
-    if selected_model.ends_with("-Chat-v1.0") {
-        selected_model = selected_model.split("-Chat-v1.0").collect::<Vec<&str>>()[0].to_string();
-    }
+    selected_model = models::llama::llama_options::LlamaOptions::from_model_name_to_pretty_name(
+        selected_model.as_str(),
+    );
 
     Ok(selected_model)
 }

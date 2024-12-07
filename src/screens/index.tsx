@@ -1,24 +1,15 @@
 import { invoke } from "@tauri-apps/api/tauri";
 import { useState, useEffect, useRef } from "react";
-import { Send, Loader2, ChevronDown } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Card, CardContent } from "@/components/ui/card";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { useGetModelOptions } from "@/hooks/use_get_model_options";
-import { useGetSelectedModel } from "@/hooks/use_get_selected_model";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import { listen } from "@tauri-apps/api/event";
-import queryClient from "@/App";
 
 export function Index() {
   const [prompt, setPrompt] = useState("");
