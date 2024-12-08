@@ -19,12 +19,20 @@ import {
 } from "@/components/ui/sidebar";
 import { ModelParameters } from "./model-parameters";
 import { ChatHistory } from "./chat-history";
+import { useGetChatHistory } from "@/hooks/use_get_chat_history";
 
 export default function AppSidebar({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { refetch } = useGetChatHistory();
+
+  const new_chat = async () => {
+    await invoke("new_chat");
+    refetch();
+  };
+
   return (
     <SidebarProvider>
       <Sidebar className="w-[300px]">
@@ -51,12 +59,7 @@ export default function AppSidebar({
               <h2 className="mb-2 text-lg font-semibold px-4 py-2 bg-background sticky top-0">
                 Chat History
               </h2>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  invoke("new_chat");
-                }}
-              >
+              <Button variant="ghost" onClick={new_chat}>
                 <MessageCirclePlus />
               </Button>
             </div>

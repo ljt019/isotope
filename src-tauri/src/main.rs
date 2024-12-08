@@ -123,9 +123,9 @@ async fn set_current_chat(
 async fn new_chat(
     state: tauri::State<'_, Mutex<models::model_manager::ModelManager>>,
 ) -> Result<(), String> {
-    let mut _model_manager = state.lock().await;
+    let mut model_manager = state.lock().await;
 
-    info!("Creating new chat, not yet implemented");
+    model_manager.new_chat().await;
 
     Ok(())
 }

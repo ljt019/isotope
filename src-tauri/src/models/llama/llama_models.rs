@@ -6,7 +6,7 @@ use candle_nn::VarBuilder;
 use candle_transformers::generation::{LogitsProcessor, Sampling};
 use candle_transformers::models::llama::{Cache, Llama, LlamaConfig, LlamaEosToks};
 use hf_hub::{api::sync::ApiBuilder, Repo, RepoType};
-use log::debug;
+use log::{debug, info};
 use std::sync::Arc;
 use tauri::Manager;
 use tauri::Runtime;
@@ -209,12 +209,36 @@ impl LlamaModel {
                 .decode(&[next_token], true)
                 .map_err(|e| anyhow::anyhow!("Decoding error: {}", e))?;
 
-            // Emit the token to the frontend
+            // Split the generated text into individual chars
+            let generated_text = generated_text.chars().collect::<Vec<char>>();
+
+            for char in generated_text {
+                // Emit each char as a token
+                let emit_result = app_handle.emit_all("chat-token", char.to_string());
+                if let Err(e) = emit_result {
+                    eprintln!("Failed to emit token: {}", e);
+                    return Err(anyhow::anyhow!("Failed to emit token: {}", e));
+                }
+
+                // Add small delay between characters
+                let delay = if char.is_whitespace() {
+                    // Longer pause at word boundaries
+                    tokio::time::Duration::from_millis(10)
+                } else {
+                    // Shorter pause between characters
+                    tokio::time::Duration::from_millis(5)
+                };
+
+                tokio::time::sleep(delay).await;
+            }
+
+            /*
             let emit_result = app_handle.emit_all("chat-token", generated_text.clone());
             if let Err(e) = emit_result {
                 eprintln!("Failed to emit token: {}", e);
                 return Err(anyhow::anyhow!("Failed to emit token: {}", e));
             }
+            */
 
             // Check for end-of-sequence
             if let Some(LlamaEosToks::Single(eos_tok_id)) = eos_token_id {
@@ -225,7 +249,7 @@ impl LlamaModel {
         }
 
         let generation_time = start_gen.elapsed().as_secs_f64();
-        println!(
+        info!(
             "Generated {} tokens in {:.2} seconds",
             token_generated, generation_time
         );

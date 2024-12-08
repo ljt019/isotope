@@ -34,7 +34,6 @@ impl ChatManager {
     }
 
     /// Will be used when the ui is implemented to switch between chats, will be used to start a new chat manually by the user
-    #[allow(dead_code)]
     pub fn new_chat(&mut self) -> rusqlite::Result<()> {
         let new_chat_name = format!("Chat {}", rand::random::<u32>());
         self.current_chat = create_new_chat(&self.database, new_chat_name)?;

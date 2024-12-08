@@ -58,6 +58,12 @@ impl ModelManager {
         current_model_value
     }
 
+    pub async fn new_chat(&mut self) {
+        self.chat_manager
+            .new_chat()
+            .expect("Failed to create new chat");
+    }
+
     pub async fn get_current_chat(&self) -> &Chat {
         self.chat_manager.get_current_chat()
     }
