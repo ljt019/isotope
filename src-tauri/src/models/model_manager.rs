@@ -14,6 +14,7 @@ pub struct ModelManager {
     chat_manager: ChatManager,
 }
 
+/// General implementation of ModelManager
 impl ModelManager {
     /// Create a new ModelManager with the given model and database connection
     pub async fn new(app_handle: tauri::AppHandle, pool: DbPool) -> rusqlite::Result<Self> {
@@ -33,45 +34,6 @@ impl ModelManager {
             chat_manager,
             inference_params_manager,
         })
-    }
-
-    pub async fn set_model(&mut self, model: LlamaOptions) {
-        self.model = Model::new(Some(&model.get_model_name()))
-            .await
-            .expect("Failed to load model");
-
-        let name = model.get_model_name().to_string();
-
-        self.inference_params_manager.set_model(model);
-
-        info!("Model set to: {}", name);
-    }
-
-    pub async fn get_current_model(&self) -> String {
-        let current_model_value = self
-            .inference_params_manager
-            .get_current_model_value()
-            .expect("Failed to get current model");
-
-        info!("Current model: {}", current_model_value);
-
-        current_model_value
-    }
-
-    pub async fn new_chat(&mut self) {
-        self.chat_manager
-            .new_chat()
-            .expect("Failed to create new chat");
-    }
-
-    pub async fn get_current_chat(&self) -> &Chat {
-        self.chat_manager.get_current_chat()
-    }
-
-    pub async fn get_chat_history(&self) -> Vec<Chat> {
-        self.chat_manager
-            .get_all_chats()
-            .expect("Failed to get chat history")
     }
 
     /// Chat with the model, with the given prompt
@@ -109,5 +71,50 @@ impl ModelManager {
 
         // Return response
         Ok(response.content)
+    }
+}
+
+/// Chat management methods
+impl ModelManager {
+    pub async fn new_chat(&mut self) {
+        self.chat_manager
+            .new_chat()
+            .expect("Failed to create new chat");
+    }
+
+    pub async fn get_current_chat(&self) -> &Chat {
+        self.chat_manager.get_current_chat()
+    }
+
+    pub async fn get_chat_history(&self) -> Vec<Chat> {
+        self.chat_manager
+            .get_all_chats()
+            .expect("Failed to get chat history")
+    }
+}
+
+/// LLM model management methods
+impl ModelManager {
+    pub async fn set_model(&mut self, model: LlamaOptions) {
+        self.model = Model::new(Some(&model.get_model_name()))
+            .await
+            .expect("Failed to load model");
+
+        let name = model.get_model_name().to_string();
+
+        self.inference_params_manager.set_model(model);
+
+        info!("Model set to: {}", name);
+    }
+
+    pub async fn get_current_model(&self) -> String {
+        let current_model_value = self
+            .inference_params_manager
+            .get_current_model_value()
+            .expect("Failed to get current model");
+
+        info!("Current model: {}", current_model_value);
+
+        current_model_value
     }
 }
