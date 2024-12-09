@@ -20,6 +20,7 @@ import {
 import { ModelParameters } from "./model-parameters";
 import { ChatHistory } from "./chat-history";
 import { useGetChatHistory } from "@/hooks/use_get_chat_history";
+import { useState } from "react";
 
 export default function AppSidebar({
   children,
@@ -33,6 +34,8 @@ export default function AppSidebar({
     refetch();
   };
 
+  const [modelFetching, setModelFetching] = useState<boolean>(false);
+
   return (
     <SidebarProvider>
       <Sidebar className="w-[300px]">
@@ -44,9 +47,9 @@ export default function AppSidebar({
                 alt="ollama"
                 className="h-8 w-8 mr-2 [filter:brightness(0)_invert(1)]"
               />
-              <SelectedModelTitle />
+              <SelectedModelTitle modelFetching={modelFetching} />
             </div>
-            <SelectModel />
+            <SelectModel setModelFetching={setModelFetching} />
           </div>
         </SidebarHeader>
         <SidebarContent className="flex flex-col">
@@ -74,10 +77,10 @@ export default function AppSidebar({
   );
 }
 
-function SelectedModelTitle() {
+function SelectedModelTitle({ modelFetching }: { modelFetching: boolean }) {
   const { data: selected_model, isLoading, isError } = useGetSelectedModel();
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading || modelFetching) return <div>Loading...</div>;
 
   if (isError) return <div>Error getting model options</div>;
 
@@ -86,7 +89,11 @@ function SelectedModelTitle() {
   return <div className="text-sm font-medium">{selected_model}</div>;
 }
 
-function SelectModel() {
+function SelectModel({
+  setModelFetching,
+}: {
+  setModelFetching: (value: boolean) => void;
+}) {
   const { data: modelOptions, isLoading, isError } = useGetModelOptions();
   const { data: selectedModel, refetch: refetchSelectedModel } =
     useGetSelectedModel();
@@ -94,7 +101,9 @@ function SelectModel() {
   async function setOption(modelName: string) {
     try {
       console.log("Setting model:", modelName);
+      setModelFetching(true);
       await invoke("set_model", { modelSelection: modelName });
+      setModelFetching(false);
       await refetchSelectedModel();
     } catch (error) {
       console.error("Error setting model:", error);

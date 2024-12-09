@@ -36,6 +36,7 @@ async fn chat(
 
 #[tauri::command]
 async fn set_model(
+    app_handle: tauri::AppHandle,
     state: tauri::State<'_, Mutex<models::model_manager::ModelManager>>,
     model_selection: String,
 ) -> Result<(), String> {
@@ -47,6 +48,11 @@ async fn set_model(
     debug!("Setting model to: {}", model.get_model_name());
 
     model_manager.set_model(model).await;
+
+    app_handle
+        .emit_all("modelChangeCompleted", ())
+        .expect("Failed to emit modelChangeCompleted event");
+
     Ok(())
 }
 
