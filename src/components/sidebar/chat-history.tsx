@@ -1,14 +1,17 @@
 import { MessageCircle, Loader2, AlertCircle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useGetChatHistory } from "@/hooks/use_get_chat_history";
+import { useGetCurrentChat } from "@/hooks/use_get_current_chat";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { invoke } from "@tauri-apps/api/tauri";
 
 export function ChatHistory() {
   const { data: chatHistory, isLoading, isError, error } = useGetChatHistory();
+  const { refetch } = useGetCurrentChat();
 
   const setCurrentChat = (chatId: string) => {
     invoke("set_current_chat", { chatId });
+    refetch();
   };
 
   if (isLoading) {

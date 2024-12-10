@@ -86,6 +86,12 @@ impl ModelManager {
         self.chat_manager.get_current_chat()
     }
 
+    pub fn set_current_chat(&mut self, chat_id: i64) {
+        self.chat_manager
+            .switch_chat(chat_id)
+            .expect("Failed to set current chat");
+    }
+
     pub fn get_chat_history(&self) -> Vec<Chat> {
         self.chat_manager
             .get_all_chats()

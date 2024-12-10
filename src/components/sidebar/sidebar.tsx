@@ -20,6 +20,7 @@ import {
 import { ModelParameters } from "./model-parameters";
 import { ChatHistory } from "./chat-history";
 import { useGetChatHistory } from "@/hooks/use_get_chat_history";
+import { useGetCurrentChat } from "@/hooks/use_get_current_chat";
 import { useState } from "react";
 
 export default function AppSidebar({
@@ -28,10 +29,12 @@ export default function AppSidebar({
   children: React.ReactNode;
 }) {
   const { refetch } = useGetChatHistory();
+  const { refetch: refetchCurrentChat } = useGetCurrentChat();
 
   const new_chat = async () => {
     await invoke("new_chat");
     refetch();
+    refetchCurrentChat();
   };
 
   const [modelFetching, setModelFetching] = useState<boolean>(false);

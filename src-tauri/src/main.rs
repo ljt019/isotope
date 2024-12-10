@@ -115,12 +115,9 @@ async fn set_current_chat(
     state: tauri::State<'_, Mutex<models::model_manager::ModelManager>>,
     chat_id: i64,
 ) -> Result<(), String> {
-    let mut _model_manager = state.lock().await;
+    let mut model_manager = state.lock().await;
 
-    info!(
-        "Switching to chat with id not yet implemented, chat_id: {}",
-        chat_id
-    );
+    model_manager.set_current_chat(chat_id);
 
     Ok(())
 }

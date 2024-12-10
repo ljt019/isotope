@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/tauri";
 import { debounce } from "lodash";
-import { useGetSystemPrompt } from "@/hooks/useGetSystemPrompt";
+import { useGetSystemPrompt } from "@/hooks/use_get_system_prompt";
 
 interface ModelParameter {
   name: string;
