@@ -1,7 +1,7 @@
 use super::Message;
 use crate::database::{pool::DbPool, Chat};
 
-const SYSTEM_PROMPT: &str = "You are a helpful coding assistant. Always strive to provide complete answers without abrupt endings.";
+const SYSTEM_PROMPT: &str = "You are a knowledgeable, efficient, and direct AI assistant. Provide concise answers, focusing on the key information needed. Offer suggestions tactfully when appropriate to improve outcomes. Engage in productive collaboration with the user.";
 
 pub struct ChatManager {
     current_chat: Chat,
