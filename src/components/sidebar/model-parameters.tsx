@@ -9,9 +9,9 @@ import { useGetCurrentInferenceParams } from "../../hooks/use_get_current_infere
 
 export interface ModelParametersPayload {
   temperature: number;
-  maxTokens: number;
-  topP: number;
-  repeatPenalty: number;
+  max_tokens: number;
+  top_p: number;
+  repeat_penalty: number;
 }
 
 interface ModelParameter {
@@ -34,7 +34,7 @@ const modelParameters: ModelParameter[] = [
   },
   {
     name: "Max Tokens",
-    key: "maxTokens",
+    key: "max_tokens",
     min: 50,
     max: 2048,
     step: 1,
@@ -42,7 +42,7 @@ const modelParameters: ModelParameter[] = [
   },
   {
     name: "Top P",
-    key: "topP",
+    key: "top_p",
     min: 0,
     max: 1,
     step: 0.01,
@@ -50,7 +50,7 @@ const modelParameters: ModelParameter[] = [
   },
   {
     name: "Repeat Penalty",
-    key: "repeatPenalty",
+    key: "repeat_penalty",
     min: 0,
     max: 2,
     step: 0.1,
@@ -100,7 +100,9 @@ export function ModelParameters() {
   // Debounced function to send parameters to backend
   const debouncedModelParameters = useCallback(
     debounce((updatedParams: ModelParametersPayload) => {
-      invoke("set_inference_params", { params: updatedParams });
+      invoke("set_inference_params", {
+        params: updatedParams,
+      });
     }, 300),
     []
   );
