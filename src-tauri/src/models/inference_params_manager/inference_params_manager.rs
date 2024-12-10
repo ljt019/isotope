@@ -55,16 +55,31 @@ impl InferenceParamsManager {
         self.inference_params.model = model_name;
     }
 
-    #[allow(dead_code)]
-    pub fn set_inference_params(&mut self, params: InferenceParams) {
+    pub fn set_user_changeable_inference_params(
+        &mut self,
+        params: super::UserChangeableInferenceParams,
+    ) {
+        // Get current params
+        let current_params = self.get_inference_params();
+
+        // Create a new param with updates
+        let new_params = InferenceParams {
+            temperature: params.temperature,
+            max_tokens: params.max_tokens,
+            top_p: Some(params.top_p),
+            repeat_penalty: params.repeat_penalty,
+            ..current_params
+        };
+
+        // Update the store with the new params
         self.store
             .insert(
                 "generation_params".to_string(),
-                serde_json::to_value(&params).expect("Failed to serialize params"),
+                serde_json::to_value(&new_params).expect("Failed to serialize params"),
             )
             .expect("Failed to insert params into store");
 
-        self.inference_params = params;
+        self.inference_params = new_params;
     }
 }
 

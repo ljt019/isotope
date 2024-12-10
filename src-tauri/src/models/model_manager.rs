@@ -125,6 +125,18 @@ impl ModelManager {
         info!("Model set to: {}", name);
     }
 
+    pub fn get_current_inference_params(&self) -> super::inference_params_manager::InferenceParams {
+        self.inference_params_manager.get_inference_params()
+    }
+
+    pub fn set_user_changeable_inference_params(
+        &mut self,
+        params: super::inference_params_manager::UserChangeableInferenceParams,
+    ) {
+        self.inference_params_manager
+            .set_user_changeable_inference_params(params);
+    }
+
     pub async fn get_current_model(&self) -> String {
         let current_model_value = self
             .inference_params_manager

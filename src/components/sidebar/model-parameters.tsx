@@ -5,9 +5,18 @@ import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/tauri";
 import { debounce } from "lodash";
 import { useGetSystemPrompt } from "@/hooks/use_get_system_prompt";
+import { useGetCurrentInferenceParams } from "../../hooks/use_get_current_inference_params";
+
+export interface ModelParametersPayload {
+  temperature: number;
+  maxTokens: number;
+  topP: number;
+  repeatPenalty: number;
+}
 
 interface ModelParameter {
   name: string;
+  key: keyof ModelParametersPayload;
   min: number;
   max: number;
   step: number;
@@ -15,10 +24,38 @@ interface ModelParameter {
 }
 
 const modelParameters: ModelParameter[] = [
-  { name: "Temperature", min: 0, max: 2, step: 0.1, defaultValue: 1 },
-  { name: "Max Tokens", min: 50, max: 2048, step: 1, defaultValue: 1024 },
-  { name: "Top P", min: 0, max: 1, step: 0.01, defaultValue: 0.9 },
-  { name: "Repeat Penalty", min: 0, max: 2, step: 0.1, defaultValue: 1 },
+  {
+    name: "Temperature",
+    key: "temperature",
+    min: 0,
+    max: 2,
+    step: 0.1,
+    defaultValue: 1,
+  },
+  {
+    name: "Max Tokens",
+    key: "maxTokens",
+    min: 50,
+    max: 2048,
+    step: 1,
+    defaultValue: 1024,
+  },
+  {
+    name: "Top P",
+    key: "topP",
+    min: 0,
+    max: 1,
+    step: 0.01,
+    defaultValue: 0.9,
+  },
+  {
+    name: "Repeat Penalty",
+    key: "repeatPenalty",
+    min: 0,
+    max: 2,
+    step: 0.1,
+    defaultValue: 1,
+  },
 ];
 
 export function ModelParameters() {
@@ -29,13 +66,44 @@ export function ModelParameters() {
     error,
   } = useGetSystemPrompt();
 
+  const {
+    data: currentParams,
+    isLoading: isLoadingCurrentParams,
+    isError: isErrorCurrentParams,
+  } = useGetCurrentInferenceParams();
+
   const [systemPrompt, setSystemPrompt] = useState<string>("");
 
+  // Use defaults initially, will override once currentParams are loaded
+  const [params, setParams] = useState<ModelParametersPayload>();
+
+  // Track if we've initialized from currentParams once
+  const [initialized, setInitialized] = useState(false);
+
   useEffect(() => {
-    if (initialSystemPrompt) {
-      setSystemPrompt(initialSystemPrompt);
+    if (
+      currentParams &&
+      !isLoadingCurrentParams &&
+      !isErrorCurrentParams &&
+      !initialized
+    ) {
+      setParams(currentParams);
+      setInitialized(true);
     }
-  }, [initialSystemPrompt]);
+  }, [
+    currentParams,
+    isLoadingCurrentParams,
+    isErrorCurrentParams,
+    initialized,
+  ]);
+
+  // Debounced function to send parameters to backend
+  const debouncedModelParameters = useCallback(
+    debounce((updatedParams: ModelParametersPayload) => {
+      invoke("set_inference_params", { params: updatedParams });
+    }, 300),
+    []
+  );
 
   const debouncedChangeSystemPrompt = useCallback(
     debounce((prompt: string) => {
@@ -43,6 +111,13 @@ export function ModelParameters() {
     }, 300),
     []
   );
+
+  // Effect to set system prompt once loaded
+  useEffect(() => {
+    if (initialSystemPrompt) {
+      setSystemPrompt(initialSystemPrompt);
+    }
+  }, [initialSystemPrompt]);
 
   const handleSystemPromptChange = (
     e: React.ChangeEvent<HTMLTextAreaElement>
@@ -56,9 +131,19 @@ export function ModelParameters() {
     return <div>Loading...</div>;
   }
 
-  if (isError) {
+  if (isError || !params) {
     return <div>Error: {error?.message}</div>;
   }
+
+  // Handle parameter slider changes
+  const handleParamChange = (
+    key: keyof ModelParametersPayload,
+    value: number[]
+  ) => {
+    const newParams = { ...params, [key]: value[0] };
+    setParams(newParams);
+    debouncedModelParameters(newParams);
+  };
 
   return (
     <div className="space-y-6">
@@ -77,7 +162,7 @@ export function ModelParameters() {
           <div className="flex items-center justify-between">
             <Label htmlFor={param.name}>{param.name}</Label>
             <span className="text-sm text-muted-foreground">
-              {param.defaultValue}
+              {params[param.key]}
             </span>
           </div>
           <Slider
@@ -85,9 +170,9 @@ export function ModelParameters() {
             min={param.min}
             max={param.max}
             step={param.step}
-            defaultValue={[param.defaultValue]}
+            value={[params[param.key]]}
+            onValueChange={(value) => handleParamChange(param.key, value)}
             className="w-full"
-            disabled={true}
           />
         </div>
       ))}

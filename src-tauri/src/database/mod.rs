@@ -100,15 +100,6 @@ pub fn get_chat(pool: &DbPool, id: i64) -> rusqlite::Result<Chat> {
     })
 }
 
-#[allow(dead_code)]
-pub fn get_chat_messages(
-    pool: &DbPool,
-    id: i64,
-) -> rusqlite::Result<Vec<crate::models::chat_manager::Message>> {
-    let chat = get_chat(pool, id)?;
-    Ok(chat.messages)
-}
-
 pub fn get_all_chats(pool: &DbPool) -> rusqlite::Result<Vec<Chat>> {
     let conn = pool.get().expect("Failed to get connection from pool");
     let mut statement = conn.prepare("SELECT * FROM chats")?;

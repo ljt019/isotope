@@ -4,6 +4,14 @@ use serde::{Deserialize, Serialize};
 pub use inference_params_manager::InferenceParamsManager;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct UserChangeableInferenceParams {
+    temperature: f64,
+    max_tokens: usize,
+    top_p: f64,
+    repeat_penalty: f32,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct InferenceParams {
     pub model: String,
     pub prompt: String,

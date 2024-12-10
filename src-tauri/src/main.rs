@@ -63,6 +63,18 @@ async fn set_model(
 }
 
 #[tauri::command]
+async fn set_inference_params(
+    state: tauri::State<'_, Mutex<models::model_manager::ModelManager>>,
+    params: models::inference_params_manager::UserChangeableInferenceParams,
+) -> Result<(), String> {
+    let mut model_manager = state.lock().await;
+
+    model_manager.set_user_changeable_inference_params(params);
+
+    Ok(())
+}
+
+#[tauri::command]
 fn get_model_options() -> Result<Vec<String>, String> {
     debug!("Fetching available model options");
     let mut llama_options = crate::models::llama::llama_options::LlamaOptions::all_model_names();
@@ -173,6 +185,17 @@ async fn get_system_prompt(
     Ok(system_prompt)
 }
 
+#[tauri::command]
+async fn get_current_inference_params(
+    state: tauri::State<'_, Mutex<models::model_manager::ModelManager>>,
+) -> Result<models::inference_params_manager::InferenceParams, String> {
+    let model_manager = state.lock().await;
+
+    let inference_params = model_manager.get_current_inference_params();
+
+    Ok(inference_params)
+}
+
 fn main() {
     dotenv::dotenv().ok();
 
@@ -247,6 +270,8 @@ fn main() {
             change_system_prompt,
             get_current_chat_id,
             get_system_prompt,
+            set_inference_params,
+            get_current_inference_params
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
