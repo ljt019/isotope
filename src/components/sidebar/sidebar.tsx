@@ -21,6 +21,7 @@ import { ModelParameters } from "./model-parameters";
 import { ChatHistory } from "./chat-history";
 import { useGetChatHistory } from "@/hooks/use_get_chat_history";
 import { useGetCurrentChat } from "@/hooks/use_get_current_chat";
+import { useGetCurrentChatId } from "@/hooks/use_get_current_chat_id";
 import { useState } from "react";
 
 export default function AppSidebar({
@@ -30,7 +31,7 @@ export default function AppSidebar({
 }) {
   const { refetch } = useGetChatHistory();
   const { refetch: refetchCurrentChat } = useGetCurrentChat();
-  const { refetch: refetchCurrentChatId } = useGetCurrentChat();
+  const { refetch: refetchCurrentChatId } = useGetCurrentChatId();
 
   const new_chat = async () => {
     await invoke("new_chat");
