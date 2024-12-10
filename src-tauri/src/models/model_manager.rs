@@ -76,20 +76,28 @@ impl ModelManager {
 
 /// Chat management methods
 impl ModelManager {
-    pub async fn new_chat(&mut self) {
+    pub fn new_chat(&mut self) {
         self.chat_manager
             .new_chat()
             .expect("Failed to create new chat");
     }
 
-    pub async fn get_current_chat(&self) -> &Chat {
+    pub fn get_current_chat(&self) -> &Chat {
         self.chat_manager.get_current_chat()
     }
 
-    pub async fn get_chat_history(&self) -> Vec<Chat> {
+    pub fn get_chat_history(&self) -> Vec<Chat> {
         self.chat_manager
             .get_all_chats()
             .expect("Failed to get chat history")
+    }
+
+    pub fn get_system_prompt(&self) -> String {
+        self.chat_manager.get_system_prompt().to_string()
+    }
+
+    pub fn change_system_prompt(&mut self, system_prompt: String) {
+        self.chat_manager.change_system_prompt(system_prompt);
     }
 }
 

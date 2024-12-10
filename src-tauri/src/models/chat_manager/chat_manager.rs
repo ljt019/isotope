@@ -6,6 +6,7 @@ const SYSTEM_PROMPT: &str = "You are a helpful coding assistant. Always strive t
 pub struct ChatManager {
     current_chat: Chat,
     database: DbPool,
+    system_prompt: String,
 }
 
 impl ChatManager {
@@ -26,11 +27,20 @@ impl ChatManager {
         Ok(Self {
             current_chat,
             database: pool,
+            system_prompt: SYSTEM_PROMPT.to_string(),
         })
     }
 
     pub fn get_current_chat(&self) -> &Chat {
         &self.current_chat
+    }
+
+    pub fn get_system_prompt(&self) -> &str {
+        &self.system_prompt
+    }
+
+    pub fn change_system_prompt(&mut self, new_prompt: String) {
+        self.system_prompt = new_prompt;
     }
 
     /// Will be used when the ui is implemented to switch between chats, will be used to start a new chat manually by the user
@@ -55,6 +65,11 @@ impl ChatManager {
     pub fn handle_prompt(&mut self, prompt: Message) -> rusqlite::Result<Vec<Message>> {
         crate::database::insert_message_into_chat(&self.database, self.current_chat.id, &prompt)?;
         self.current_chat.messages.push(prompt);
+        let system_prompt = Message {
+            role: "system".to_string(),
+            content: self.system_prompt.to_string(),
+        };
+        self.current_chat.messages.insert(0, system_prompt);
         Ok(self.current_chat.messages.clone())
     }
 
@@ -67,10 +82,5 @@ impl ChatManager {
 
 fn create_new_chat(pool: &DbPool, name: String) -> rusqlite::Result<Chat> {
     let new_chat_id = crate::database::insert_chat(pool, name)?;
-    let system_prompt = Message {
-        role: "system".to_string(),
-        content: SYSTEM_PROMPT.to_string(),
-    };
-    crate::database::insert_message_into_chat(pool, new_chat_id, &system_prompt)?;
     crate::database::get_chat(pool, new_chat_id)
 }

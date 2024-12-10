@@ -92,7 +92,7 @@ async fn get_current_chat(
 ) -> Result<Vec<models::chat_manager::Message>, String> {
     let model_manager = state.lock().await;
 
-    let current_chat = model_manager.get_current_chat().await;
+    let current_chat = model_manager.get_current_chat();
 
     let messages = current_chat.messages.clone();
 
@@ -105,7 +105,7 @@ async fn get_chat_history(
 ) -> Result<Vec<database::Chat>, String> {
     let model_manager = state.lock().await;
 
-    let chat_history = model_manager.get_chat_history().await;
+    let chat_history = model_manager.get_chat_history();
 
     Ok(chat_history)
 }
@@ -131,9 +131,32 @@ async fn new_chat(
 ) -> Result<(), String> {
     let mut model_manager = state.lock().await;
 
-    model_manager.new_chat().await;
+    model_manager.new_chat();
 
     Ok(())
+}
+
+#[tauri::command]
+async fn change_system_prompt(
+    state: tauri::State<'_, Mutex<models::model_manager::ModelManager>>,
+    system_prompt: String,
+) -> Result<(), String> {
+    let mut model_manager = state.lock().await;
+
+    model_manager.change_system_prompt(system_prompt);
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_system_prompt(
+    state: tauri::State<'_, Mutex<models::model_manager::ModelManager>>,
+) -> Result<String, String> {
+    let model_manager = state.lock().await;
+
+    let system_prompt = model_manager.get_system_prompt();
+
+    Ok(system_prompt)
 }
 
 fn main() {
@@ -207,6 +230,8 @@ fn main() {
             get_chat_history,
             set_current_chat,
             new_chat,
+            change_system_prompt,
+            get_system_prompt,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
