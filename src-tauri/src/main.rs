@@ -1,6 +1,12 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 //#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+/*
+TODO:
+- Fix the initial message not showing up in the chat window
+
+*/
+
 mod database;
 mod models;
 mod utils;
@@ -97,6 +103,17 @@ async fn get_current_chat(
     let messages = current_chat.messages.clone();
 
     Ok(messages)
+}
+
+#[tauri::command]
+async fn get_current_chat_id(
+    state: tauri::State<'_, Mutex<models::model_manager::ModelManager>>,
+) -> Result<i64, String> {
+    let model_manager = state.lock().await;
+
+    let current_chat_id = model_manager.get_current_chat_id();
+
+    Ok(current_chat_id)
 }
 
 #[tauri::command]
@@ -228,6 +245,7 @@ fn main() {
             set_current_chat,
             new_chat,
             change_system_prompt,
+            get_current_chat_id,
             get_system_prompt,
         ])
         .run(tauri::generate_context!())

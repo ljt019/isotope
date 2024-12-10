@@ -86,6 +86,10 @@ impl ModelManager {
         self.chat_manager.get_current_chat()
     }
 
+    pub fn get_current_chat_id(&self) -> i64 {
+        self.chat_manager.get_current_chat_id()
+    }
+
     pub fn set_current_chat(&mut self, chat_id: i64) {
         self.chat_manager
             .switch_chat(chat_id)

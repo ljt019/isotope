@@ -50,6 +50,10 @@ impl ChatManager {
         Ok(())
     }
 
+    pub fn get_current_chat_id(&self) -> i64 {
+        self.current_chat.id
+    }
+
     /// Will allow user to switch between the chat they want to view/interact with
     pub fn switch_chat(&mut self, chat_id: i64) -> rusqlite::Result<()> {
         self.current_chat = crate::database::get_chat(&self.database, chat_id)?;
