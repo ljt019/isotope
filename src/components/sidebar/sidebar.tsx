@@ -30,11 +30,13 @@ export default function AppSidebar({
 }) {
   const { refetch } = useGetChatHistory();
   const { refetch: refetchCurrentChat } = useGetCurrentChat();
+  const { refetch: refetchCurrentChatId } = useGetCurrentChat();
 
   const new_chat = async () => {
     await invoke("new_chat");
     refetch();
     refetchCurrentChat();
+    refetchCurrentChatId();
   };
 
   const [modelFetching, setModelFetching] = useState<boolean>(false);
