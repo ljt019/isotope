@@ -1,5 +1,5 @@
 [package]
-name = "tauri_template"
+name = "isotope"
 version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
@@ -7,38 +7,19 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "isotope_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
 [build-dependencies]
-tauri-build = { version = "1", features = [] }
+tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "1", features = ["devtools", "window-unminimize", "window-start-dragging", "window-unmaximize", "window-show", "window-minimize", "window-maximize", "window-close", "window-hide", "shell-open", "test"] }
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokenizers = "0.20.3"
-candle-core = "0.7.2"
-protobuf = "3.7.1"
-candle-transformers = "0.7.2"
-candle-nn = "0.7.2"
-rand = "0.8.5"
-anyhow = "1.0.93"
-hf-hub = "0.3.2"
-tokio = { version = "1.41.1", features = ["full"] }
-futures = "0.3.31"
-dotenv = "0.15.0"
-window-shadows = "0.2.2"
-tauri-plugin-store = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
-strum = {version = "0.26.3", features = ["derive"] }
-rusqlite = { version = "0.32.1", features = ["bundled"] }
-chrono = "0.4.38"
-r2d2 = "0.8.10"
-r2d2_sqlite = "0.25.0"
-env_logger = "0.6.1"
-log = { version = "0.4.22", features = ["release_max_level_trace"] }
-simple_logger = "5.0.0"
-tempfile = "3.14.0"
-tauri-plugin-log = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
-colored = "2.1.0"
 
-[features]
-# This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
-custom-protocol = ["tauri/custom-protocol"]
